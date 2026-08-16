@@ -1,7 +1,6 @@
 "use client";
 
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import type { ChangeEvent } from "react";
 import {
   startTransition,
   useEffect,
@@ -15,6 +14,8 @@ import { AuthPanel } from "@/components/auth-panel";
 import { ConflictPanel } from "@/components/conflict-panel";
 import { HabitDashboard } from "@/components/habit-dashboard";
 import { HabitOnboarding } from "@/components/habit-onboarding";
+import { ProductStoryPanel } from "@/components/product-story-panel";
+import { RichJournalEditor } from "@/components/rich-journal-editor";
 import { TimezonePanel } from "@/components/timezone-panel";
 import {
   cacheFromCloudEntry,
@@ -34,7 +35,13 @@ import {
   migrateAnonymousEntries,
   reconcileDirtyCaches,
 } from "@/lib/draft-migration";
-import { loadEntry, removeEntry, saveEntry } from "@/lib/entry-storage";
+import {
+  loadEntry,
+  loadRichEntry,
+  removeEntry,
+  saveEntry,
+  saveRichEntry,
+} from "@/lib/entry-storage";
 import { formatLocalDate, getLocalDateString } from "@/lib/local-date";
 import {
   fetchDailyPrompt,
@@ -58,6 +65,11 @@ import {
   getDateInTimeZone,
 } from "@/lib/timezone";
 import { countWords } from "@/lib/word-count";
+import {
+  plainTextFromRichDocument,
+  richDocumentsEqual,
+  type RichEntryDocument,
+} from "@/lib/rich-text";
 import type {
   CloudSaveStatus,
   MigrationConflict,
@@ -108,6 +120,8 @@ function preferencesFromProfile(profile: Profile): HabitPreferences {
 
 export function JournalEditor() {
   const [entry, setEntry] = useState("");
+  const [richEntry, setRichEntry] = useState<RichEntryDocument | null>(null);
+  const [editorLoadKey, setEditorLoadKey] = useState(0);
   const [localDate, setLocalDate] = useState("");
   const [dateLabel, setDateLabel] = useState("Today");
   const [saveStatus, setSaveStatus] = useState<CloudSaveStatus>("restoring");
@@ -133,8 +147,10 @@ export function JournalEditor() {
   const [promptWorking, setPromptWorking] = useState(false);
   const [pastEntryUnavailable, setPastEntryUnavailable] = useState(false);
   const [welcomeBackVisible, setWelcomeBackVisible] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const entryRef = useRef(entry);
+  const richEntryRef = useRef<RichEntryDocument | null>(richEntry);
   const localDateRef = useRef(localDate);
   const previousWordCountRef = useRef(0);
   const versionRef = useRef(0);
@@ -152,6 +168,17 @@ export function JournalEditor() {
 
   const wordCount = countWords(entry);
   const progress = Math.min(wordCount, WORD_TARGET);
+
+  function restoreEditorDocument(
+    content: string,
+    richContent: RichEntryDocument | null,
+  ) {
+    entryRef.current = content;
+    richEntryRef.current = richContent;
+    setEntry(content);
+    setRichEntry(richContent);
+    setEditorLoadKey((value) => value + 1);
+  }
 
   function setConflictList(next: MigrationConflict[]) {
     conflictsRef.current = next;
@@ -205,9 +232,15 @@ export function JournalEditor() {
   function restoreAnonymousDate(date = new Date()) {
     const today = getLocalDateString(date);
     const restoredEntry = loadEntry(today);
+    const storedRichEntry = loadRichEntry(today);
+    const restoredRichEntry =
+      storedRichEntry && plainTextFromRichDocument(storedRichEntry) === restoredEntry
+        ? storedRichEntry
+        : null;
     const restoredWordCount = countWords(restoredEntry);
 
     entryRef.current = restoredEntry;
+    richEntryRef.current = restoredRichEntry;
     localDateRef.current = today;
     todayDateRef.current = today;
     previousWordCountRef.current = restoredWordCount;
@@ -216,6 +249,8 @@ export function JournalEditor() {
     analyticsStartedRef.current = false;
     startTransition(() => {
       setEntry(restoredEntry);
+      setRichEntry(restoredRichEntry);
+      setEditorLoadKey((value) => value + 1);
       setLocalDate(today);
       setTodayDate(today);
       setDateLabel(formatLocalDate(date));
@@ -243,6 +278,7 @@ export function JournalEditor() {
               {
                 entryDate: input.entryDate,
                 localContent: input.content,
+                localRichContent: input.richContent,
                 remote: result.remote,
               },
             ]),
@@ -258,16 +294,22 @@ export function JournalEditor() {
           const saved = result.entry;
           const isCurrent = saved.entryDate === localDateRef.current;
           const currentContent = entryRef.current;
+          const currentRichContent = richEntryRef.current;
 
           if (isCurrent) {
             versionRef.current = saved.version;
           }
 
-          if (isCurrent && currentContent !== saved.content) {
+          if (
+            isCurrent &&
+            (currentContent !== saved.content ||
+              !richDocumentsEqual(currentRichContent, saved.richContent))
+          ) {
             saveCloudCache(userId, {
               content: currentContent,
               dirty: true,
               entryDate: saved.entryDate,
+              richContent: currentRichContent,
               updatedAt: new Date().toISOString(),
               version: saved.version,
               wordCount: countWords(currentContent),
@@ -305,10 +347,10 @@ export function JournalEditor() {
     const conflict = knownConflicts.find((item) => item.entryDate === entryDate);
     if (conflict) {
       const restoredCount = countWords(conflict.localContent);
-      entryRef.current = conflict.localContent;
+      richEntryRef.current = conflict.localRichContent;
       versionRef.current = conflict.remote.version;
       previousWordCountRef.current = restoredCount;
-      setEntry(conflict.localContent);
+      restoreEditorDocument(conflict.localContent, conflict.localRichContent);
       setHasCompleted(restoredCount >= WORD_TARGET);
       setSaveStatus("conflict");
       setIsReady(true);
@@ -324,12 +366,13 @@ export function JournalEditor() {
         return;
       }
       const restored = cache?.content ?? "";
+      const restoredRich = cache?.richContent ?? null;
       const restoredCount = countWords(restored);
-      entryRef.current = restored;
+      richEntryRef.current = restoredRich;
       versionRef.current = cache?.version ?? 0;
       previousWordCountRef.current = restoredCount;
       hasEditedRef.current = false;
-      setEntry(restored);
+      restoreEditorDocument(restored, restoredRich);
       setHasCompleted(restoredCount >= WORD_TARGET);
       setSaveStatus("offline");
       setIsReady(true);
@@ -338,9 +381,10 @@ export function JournalEditor() {
     try {
       const remote = await fetchCloudEntry(activeClient, entryDate);
       const restored = remote?.content ?? cache?.content ?? "";
+      const restoredRich = remote?.richContent ?? cache?.richContent ?? null;
       const restoredCount = countWords(restored);
       versionRef.current = remote?.version ?? cache?.version ?? 0;
-      entryRef.current = restored;
+      richEntryRef.current = restoredRich;
       previousWordCountRef.current = restoredCount;
       hasEditedRef.current = false;
 
@@ -349,7 +393,7 @@ export function JournalEditor() {
       }
 
       startTransition(() => {
-        setEntry(restored);
+        restoreEditorDocument(restored, restoredRich);
         setHasCompleted(restoredCount >= WORD_TARGET);
         setSaveStatus("saved-cloud");
         setIsReady(true);
@@ -362,10 +406,11 @@ export function JournalEditor() {
         return;
       }
       const restored = cache?.content ?? "";
-      entryRef.current = restored;
+      const restoredRich = cache?.richContent ?? null;
+      richEntryRef.current = restoredRich;
       versionRef.current = cache?.version ?? 0;
       previousWordCountRef.current = countWords(restored);
-      setEntry(restored);
+      restoreEditorDocument(restored, restoredRich);
       setHasCompleted(previousWordCountRef.current >= WORD_TARGET);
       setSaveStatus(navigator.onLine ? "error" : "offline");
       setIsReady(true);
@@ -424,11 +469,13 @@ export function JournalEditor() {
     const currentProfile = profileRef.current;
     if (currentSession && currentProfile && cloudReadyRef.current) {
       const content = entryRef.current;
+      const richContent = richEntryRef.current;
       const currentWordCount = countWords(content);
       saveCloudCache(currentSession.user.id, {
         content,
         dirty: true,
         entryDate: currentDate,
+        richContent,
         updatedAt: new Date().toISOString(),
         version: versionRef.current,
         wordCount: currentWordCount,
@@ -437,12 +484,14 @@ export function JournalEditor() {
         content,
         entryDate: currentDate,
         expectedVersion: versionRef.current,
+        richContent,
         wordCount: currentWordCount,
       });
       return;
     }
 
     saveEntry(currentDate, entryRef.current);
+    saveRichEntry(currentDate, richEntryRef.current);
   }
 
   useEffect(() => {
@@ -543,6 +592,7 @@ export function JournalEditor() {
 
   useEffect(() => {
     entryRef.current = entry;
+    richEntryRef.current = richEntry;
 
     if (!isReady || !localDate || !hasEditedRef.current) {
       return;
@@ -562,6 +612,7 @@ export function JournalEditor() {
           content: entryRef.current,
           dirty: true,
           entryDate: localDate,
+          richContent: richEntryRef.current,
           updatedAt: new Date().toISOString(),
           version: versionRef.current,
           wordCount: currentWordCount,
@@ -574,11 +625,13 @@ export function JournalEditor() {
             content: entryRef.current,
             entryDate: localDate,
             expectedVersion: versionRef.current,
+            richContent: richEntryRef.current,
             wordCount: currentWordCount,
           });
         }
       } else {
         saveEntry(localDate, entryRef.current);
+        saveRichEntry(localDate, richEntryRef.current);
         setSaveStatus("saved-local");
       }
       saveTimerRef.current = null;
@@ -590,7 +643,7 @@ export function JournalEditor() {
         saveTimerRef.current = null;
       }
     };
-  }, [entry, isReady, localDate]);
+  }, [entry, isReady, localDate, richEntry]);
 
   useEffect(() => {
     function saveWhenHidden() {
@@ -620,6 +673,7 @@ export function JournalEditor() {
             content: dirtyCache.content,
             entryDate: dirtyCache.entryDate,
             expectedVersion: dirtyCache.version,
+            richContent: dirtyCache.richContent,
             wordCount: dirtyCache.wordCount,
           });
         }
@@ -694,8 +748,10 @@ export function JournalEditor() {
     };
   }, [client]);
 
-  function handleEntryChange(event: ChangeEvent<HTMLTextAreaElement>) {
-    const nextEntry = event.target.value;
+  function handleEntryChange(
+    nextEntry: string,
+    nextRichEntry: RichEntryDocument,
+  ) {
     const nextWordCount = countWords(nextEntry);
 
     if (!analyticsStartedRef.current) {
@@ -729,8 +785,10 @@ export function JournalEditor() {
 
     previousWordCountRef.current = nextWordCount;
     entryRef.current = nextEntry;
+    richEntryRef.current = nextRichEntry;
     hasEditedRef.current = true;
     setEntry(nextEntry);
+    setRichEntry(nextRichEntry);
     setHasCompleted(nextWordCount >= WORD_TARGET);
   }
 
@@ -839,10 +897,9 @@ export function JournalEditor() {
     saveCloudCache(session.user.id, cacheFromCloudEntry(conflict.remote));
     removeEntry(conflict.entryDate);
     if (conflict.entryDate === localDateRef.current) {
-      entryRef.current = conflict.remote.content;
       versionRef.current = conflict.remote.version;
       previousWordCountRef.current = conflict.remote.wordCount;
-      setEntry(conflict.remote.content);
+      restoreEditorDocument(conflict.remote.content, conflict.remote.richContent);
       setHasCompleted(conflict.remote.wordCount >= WORD_TARGET);
     }
     const remaining = conflictsRef.current.slice(1);
@@ -865,6 +922,7 @@ export function JournalEditor() {
         content: conflict.localContent,
         entryDate: conflict.entryDate,
         expectedVersion: conflict.remote.version,
+        richContent: conflict.localRichContent,
         wordCount: countWords(conflict.localContent),
       });
 
@@ -919,6 +977,7 @@ export function JournalEditor() {
               365 <span className="text-[var(--accent)]">×</span> 100
             </a>
             <div className="flex items-center gap-3 sm:gap-5">
+              <button type="button" onClick={() => setAboutOpen(true)} className="rounded-full px-1 py-2 text-[0.65rem] font-bold text-[var(--muted)] outline-none hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:px-2 sm:text-xs"><span className="sm:hidden">About</span><span className="hidden sm:inline">About 365x100</span></button>
               <p className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)] sm:text-xs sm:tracking-[0.16em]">
                 <span className={`h-2 w-2 shrink-0 rounded-full ${saveStatus === "error" || saveStatus === "conflict" ? "bg-red-700" : saveStatus.startsWith("saving") || saveStatus === "retrying" ? "bg-[var(--accent)]" : "bg-[var(--sage)]"}`} aria-hidden="true" />
                 <span aria-live="polite">{statusLabel[saveStatus]}</span>
@@ -966,8 +1025,16 @@ export function JournalEditor() {
                 </div>
               ) : (
                 <>
-                  <label htmlFor="daily-entry" className="sr-only">{isToday ? "Your entry for today" : `Your entry for ${dateLabel}`}</label>
-                  <textarea id="daily-entry" value={entry} onChange={handleEntryChange} disabled={!isReady} placeholder={isReady ? "Start with a moment you want to remember…" : "Restoring this draft…"} spellCheck="true" className="entry-textarea min-h-[23rem] w-full flex-1 resize-none rounded-xl border-0 bg-transparent px-2 py-1 font-serif text-[1.45rem] leading-8 text-[var(--ink)] outline-none placeholder:text-[var(--muted)]/45 focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-white/70 disabled:cursor-wait sm:min-h-[27rem] sm:px-3 sm:text-[1.65rem]" aria-describedby="entry-progress" />
+                  <RichJournalEditor
+                    key={editorLoadKey}
+                    describedBy="entry-progress"
+                    disabled={!isReady}
+                    label={isToday ? "Your entry for today" : `Your entry for ${dateLabel}`}
+                    onChange={handleEntryChange}
+                    placeholder={isReady ? "Start with a moment you want to remember…" : "Restoring this draft…"}
+                    plainContent={entry}
+                    richContent={richEntry}
+                  />
                   <div id="entry-progress" className="mt-5 border-t border-[var(--line)] pt-5">
                     <div className="mb-3 flex items-baseline justify-between gap-4">
                       <p className="text-sm font-bold tabular-nums text-[var(--ink)]" aria-live="polite">{wordCount} / {WORD_TARGET} words</p>
@@ -986,7 +1053,7 @@ export function JournalEditor() {
                 <span className={`${isCelebrating ? "completion-mark" : ""} grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-xl font-bold`} aria-hidden="true">✓</span>
                 <div>
                   <h2 id="completion-title" className="font-serif text-3xl leading-none tracking-[-0.03em]">{isToday ? "Today is complete." : "This day is complete."}</h2>
-                  <p className="mt-2 text-sm leading-6 text-white/65">You showed up. Keep writing, or leave the rest for tomorrow.</p>
+                  <p className="mt-2 text-sm leading-6 text-white/65">You showed up. Today’s page is now part of the story your month and year are becoming.</p>
                 </div>
               </div>
               <div className="mt-5 sm:mt-0 sm:text-right">
@@ -1007,6 +1074,7 @@ export function JournalEditor() {
       </main>
 
       <AuthPanel open={authOpen} onClose={() => setAuthOpen(false)} onAuthenticated={() => setAuthOpen(false)} />
+      <ProductStoryPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
       {timezoneRequired && session && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
       <HabitDashboard loading={habitLoading} onClose={() => setHabitOpen(false)} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} summary={habitSummary} />

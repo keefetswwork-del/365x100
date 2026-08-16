@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json, Tables } from "@/lib/database.types";
+import {
+  asDatabaseJson,
+  plainTextFromRichDocument,
+  sanitizeRichEntryDocument,
+  type RichEntryDocument,
+} from "@/lib/rich-text";
 import type { CloudEntry, Profile, SaveEntryResult } from "@/types/cloud";
 
 type Client = SupabaseClient<Database>;
@@ -15,9 +21,14 @@ export class CloudRequestError extends Error {
 }
 
 function mapEntry(row: EntryRow): CloudEntry {
+  const richContent = sanitizeRichEntryDocument(row.content_rich);
   return {
     completedAt: row.completed_at,
     content: row.content,
+    richContent:
+      richContent && plainTextFromRichDocument(richContent) === row.content
+        ? richContent
+        : null,
     createdAt: row.created_at,
     entryDate: row.entry_date,
     id: row.id,
@@ -139,14 +150,24 @@ export async function saveCloudEntry(
     content: string;
     wordCount: number;
     expectedVersion: number;
+    richContent: RichEntryDocument | null;
   },
 ): Promise<SaveEntryResult> {
-  const { data, error } = await client.rpc("save_entry", {
-    p_content: input.content,
-    p_entry_date: input.entryDate,
-    p_expected_version: input.expectedVersion,
-    p_word_count: input.wordCount,
-  });
+  const request = input.richContent
+    ? client.rpc("save_rich_entry", {
+        p_content: input.content,
+        p_content_rich: asDatabaseJson(input.richContent)!,
+        p_entry_date: input.entryDate,
+        p_expected_version: input.expectedVersion,
+        p_word_count: input.wordCount,
+      })
+    : client.rpc("save_entry", {
+        p_content: input.content,
+        p_entry_date: input.entryDate,
+        p_expected_version: input.expectedVersion,
+        p_word_count: input.wordCount,
+      });
+  const { data, error } = await request;
   if (error || !data || !isObject(data)) {
     throw new CloudRequestError("Entry could not be saved.");
   }

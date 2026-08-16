@@ -62,28 +62,33 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
 
   await page.goto("/");
   await editor.fill(originalDraft);
+  await editor.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+  await page.getByRole("button", { name: "Bold" }).click();
+  await expect(editor.locator("strong")).toHaveText(originalDraft);
   await expect(page.getByText("Saved on this device", { exact: true })).toBeVisible();
   await signInWithOtp(page, request, email);
 
   await expect(page.getByRole("dialog", { name: "When does your day end?" })).toBeVisible();
-  await expect(editor).toHaveValue(originalDraft);
+  await expect(editor).toHaveText(originalDraft);
+  await expect(editor.locator("strong")).toHaveText(originalDraft);
   await page.getByRole("button", { name: /^Use / }).click();
   await expect(page.getByRole("dialog", { name: "See the week you wrote." })).toBeVisible();
   await page.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByText("Saved to cloud", { exact: true })).toBeVisible();
-  await expect(editor).toHaveValue(originalDraft);
+  await expect(editor).toHaveText(originalDraft);
   await expect.poll(() => page.evaluate(() =>
     Object.keys(localStorage).filter((key) => key.startsWith("365x100:entry:")).length,
   )).toBe(0);
 
   await page.reload();
-  await expect(editor).toHaveValue(originalDraft);
+  await expect(editor).toHaveText(originalDraft);
 
   const secondContext = await browser.newContext();
   const secondPage = await newPage(secondContext);
   await signInWithOtp(secondPage, request, email);
   const secondEditor = secondPage.getByLabel("Your entry for today");
-  await expect(secondEditor).toHaveValue(originalDraft);
+  await expect(secondEditor).toHaveText(originalDraft);
+  await expect(secondEditor.locator("strong")).toHaveText(originalDraft);
 
   const firstUpdate = `${originalDraft} First device update.`;
   await editor.fill(firstUpdate);

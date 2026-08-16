@@ -1,4 +1,8 @@
 import type { CloudEntry, CloudEntryCache } from "@/types/cloud";
+import {
+  plainTextFromRichDocument,
+  sanitizeRichEntryDocument,
+} from "@/lib/rich-text";
 
 const CLOUD_CACHE_PREFIX = "365x100:cloud:";
 
@@ -45,7 +49,14 @@ export function loadCloudCache(
       return null;
     }
 
-    return parsed as CloudEntryCache;
+    const richContent = sanitizeRichEntryDocument(parsed.richContent);
+    return {
+      ...parsed,
+      richContent:
+        richContent && plainTextFromRichDocument(richContent) === parsed.content
+          ? richContent
+          : null,
+    } as CloudEntryCache;
   } catch {
     return null;
   }
@@ -71,6 +82,7 @@ export function saveCloudCache(
 export function cacheFromCloudEntry(entry: CloudEntry): CloudEntryCache {
   return {
     content: entry.content,
+    richContent: entry.richContent,
     dirty: false,
     entryDate: entry.entryDate,
     updatedAt: entry.updatedAt,

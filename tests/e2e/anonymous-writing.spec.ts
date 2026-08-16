@@ -41,7 +41,7 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   expect(storedDraft?.value).toBe(completedEntry);
 
   await page.reload();
-  await expect(editor).toHaveValue(completedEntry);
+  await expect(editor).toHaveText(completedEntry);
   await expect(
     page.getByRole("heading", { name: "Today is complete." }),
   ).toBeVisible();
@@ -51,7 +51,7 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
     .click();
   await expect(page.getByRole("dialog", { name: "Begin your year." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
-  await expect(editor).toHaveValue(completedEntry);
+  await expect(editor).toHaveText(completedEntry);
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(editor).toBeVisible();

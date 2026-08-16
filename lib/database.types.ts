@@ -119,6 +119,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           content: string
+          content_rich: Json | null
           created_at: string
           entry_date: string
           id: string
@@ -130,6 +131,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           content?: string
+          content_rich?: Json | null
           created_at?: string
           entry_date: string
           id?: string
@@ -141,6 +143,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           content?: string
+          content_rich?: Json | null
           created_at?: string
           entry_date?: string
           id?: string
@@ -310,6 +313,16 @@ export type Database = {
       save_entry: {
         Args: {
           p_content: string
+          p_entry_date: string
+          p_expected_version: number
+          p_word_count: number
+        }
+        Returns: Json
+      }
+      save_rich_entry: {
+        Args: {
+          p_content: string
+          p_content_rich: Json
           p_entry_date: string
           p_expected_version: number
           p_word_count: number

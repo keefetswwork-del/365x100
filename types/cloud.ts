@@ -1,3 +1,5 @@
+import type { RichEntryDocument } from "@/lib/rich-text";
+
 export type CloudSaveStatus =
   | "restoring"
   | "saved-local"
@@ -27,6 +29,7 @@ export interface CloudEntry {
   userId: string;
   entryDate: string;
   content: string;
+  richContent: RichEntryDocument | null;
   wordCount: number;
   completedAt: string | null;
   version: number;
@@ -41,12 +44,14 @@ export type SaveEntryResult =
 export interface MigrationConflict {
   entryDate: string;
   localContent: string;
+  localRichContent: RichEntryDocument | null;
   remote: CloudEntry;
 }
 
 export interface CloudEntryCache {
   entryDate: string;
   content: string;
+  richContent: RichEntryDocument | null;
   wordCount: number;
   version: number;
   dirty: boolean;
@@ -56,6 +61,7 @@ export interface CloudEntryCache {
 export interface PendingCloudSave {
   entryDate: string;
   content: string;
+  richContent: RichEntryDocument | null;
   wordCount: number;
   expectedVersion: number;
 }

@@ -377,7 +377,7 @@ Only after people return:
 
 Free users access their latest 30 days.
 Older writing remains securely stored but locked.
-Premium costs S$5/month or S$39/year.
+Premium costs US$5/month or US$29/year.
 Upgrade prompt appears after seven completed days.
 Stripe Checkout handles payment.
 Cancellation does not delete writing.
@@ -406,3 +406,48 @@ Printed-book preorder test
 
 Do not build printing logistics yet. First place a “Get this printed — S$49” interest button and measure demand.
 
+Build 3.1 addendum: Rich writing and product story
+
+Build 3.1 is implemented after Build 3: Return habit and before Build 4: Monetisation, even though this addendum appears at the end of the roadmap.
+
+Add:
+
+A distraction-free rich-text editor for anonymous and signed-in writers
+Undo and redo
+Paragraph, title, subtitle and quote styles
+Bold, italic, underline and strikethrough
+Bullet and numbered lists
+Indentation and text alignment
+Safe links
+Emoji search and insertion
+Curated Newsreader and Manrope typography
+Curated font sizes, text colours and highlights
+Clear formatting
+An “About 365x100” explanation that never blocks writing
+A post-completion message connecting today’s writing to the user’s life story
+A signed-in “Your book in progress” panel using month and year statistics
+
+Keep plain text as the authoritative projection for word counts, progress, analytics privacy and future book generation. Store a versioned rich document beside it so formatting survives refresh, signup, cloud sync, offline retry, past-entry editing and version conflicts. Existing plain-text entries must continue to open safely, and cached older clients must retain their original save path.
+
+Explain that writing 100 words a day creates a record of a life that can become monthly chapters and an annual collection. Monthly and annual digital books and optional hardcopy are a coming-later vision, not an available product in Build 3.1.
+
+Do not add:
+
+Images or file uploads
+Tables, drawings or checklists
+Arbitrary fonts, colours or CSS
+PDF or book generation
+Digital-book downloads
+Payments, print orders or preorder handling
+
+Never include plain or formatted journal content in analytics, URLs, logs, telemetry or error messages.
+
+Success criteria
+
+Formatting survives refresh, anonymous-to-account migration and cross-device sync.
+Formatting a passage never changes its word count or completion state.
+Existing plain-text entries and cached Build 3 clients continue to save safely.
+Mobile controls do not obstruct the editor or keyboard.
+All toolbar controls are keyboard accessible, labelled and visibly focused.
+The product story is discoverable without replacing the direct-to-editor homepage.
+Future book language is clearly labelled as coming later.

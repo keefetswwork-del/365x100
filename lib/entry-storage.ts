@@ -1,6 +1,11 @@
 import { isValidLocalDate } from "@/lib/local-date";
+import {
+  sanitizeRichEntryDocument,
+  type RichEntryDocument,
+} from "@/lib/rich-text";
 
 export const ENTRY_KEY_PREFIX = "365x100:entry:";
+export const RICH_ENTRY_KEY_PREFIX = "365x100:entry-rich:";
 const ENTRY_KEY_PATTERN = /^365x100:entry:(\d{4}-\d{2}-\d{2})$/;
 
 type EntryStorage = Pick<Storage, "getItem" | "setItem">;
@@ -19,6 +24,10 @@ function getBrowserStorage(): EntryStorage | null {
 
 export function getEntryStorageKey(localDate: string): string {
   return `${ENTRY_KEY_PREFIX}${localDate}`;
+}
+
+export function getRichEntryStorageKey(localDate: string): string {
+  return `${RICH_ENTRY_KEY_PREFIX}${localDate}`;
 }
 
 export function loadEntry(
@@ -53,9 +62,37 @@ export function saveEntry(
   }
 }
 
+export function loadRichEntry(
+  localDate: string,
+  storage: EntryStorage | null = getBrowserStorage(),
+): RichEntryDocument | null {
+  if (!storage) return null;
+  try {
+    const value = storage.getItem(getRichEntryStorageKey(localDate));
+    return value ? sanitizeRichEntryDocument(JSON.parse(value)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveRichEntry(
+  localDate: string,
+  document: RichEntryDocument | null,
+  storage: EntryStorage | null = getBrowserStorage(),
+): boolean {
+  if (!storage || !document) return false;
+  try {
+    storage.setItem(getRichEntryStorageKey(localDate), JSON.stringify(document));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface LocalEntry {
   entryDate: string;
   content: string;
+  richContent: RichEntryDocument | null;
 }
 
 export function listEntries(storage?: Storage): LocalEntry[] {
@@ -76,6 +113,7 @@ export function listEntries(storage?: Storage): LocalEntry[] {
       entries.push({
         content: target.getItem(key) ?? "",
         entryDate: match[1],
+        richContent: loadRichEntry(match[1], target),
       });
     }
   } catch {
@@ -93,6 +131,7 @@ export function removeEntry(localDate: string, storage?: Storage): boolean {
 
   try {
     target.removeItem(getEntryStorageKey(localDate));
+    target.removeItem(getRichEntryStorageKey(localDate));
     return true;
   } catch {
     return false;

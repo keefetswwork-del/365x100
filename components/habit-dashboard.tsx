@@ -58,6 +58,15 @@ export function HabitDashboard({
               <article className="rounded-2xl border border-[var(--line)] bg-white/55 p-4"><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">This year</p><p className="mt-1 font-serif text-3xl">{summary.yearCompletedDays}</p><p className="text-sm text-[var(--muted)]">days · {summary.yearWords} words</p></article>
             </div>
 
+            <section className="mt-5 overflow-hidden rounded-[1.5rem] bg-[var(--ink)] p-5 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent)]">Your book in progress</p>
+                <h3 className="mt-2 font-serif text-3xl tracking-[-0.03em]">These pages are becoming your year.</h3>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">You have written {summary.yearWords.toLocaleString()} words across {summary.yearCompletedDays} completed days this year.</p>
+              </div>
+              <span className="mt-4 inline-flex shrink-0 rounded-full border border-white/20 px-4 py-2 text-xs font-bold text-white/75 sm:mt-0">Digital and hardcopy books · coming later</span>
+            </section>
+
             <section className="mt-7 rounded-[1.5rem] border border-[var(--line)] bg-white/55 p-4 sm:p-6">
               <div className="flex items-center justify-between gap-3">
                 <button type="button" onClick={onPreviousMonth} aria-label="Previous month" className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] text-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">←</button>

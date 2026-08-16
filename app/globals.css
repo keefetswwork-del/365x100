@@ -37,6 +37,8 @@ body {
 }
 
 button,
+input,
+select,
 textarea {
   font: inherit;
 }
@@ -55,7 +57,7 @@ textarea {
   position: fixed;
 }
 
-.entry-textarea {
+.rich-editor-content {
   background-image: linear-gradient(
     to bottom,
     transparent calc(2rem - 1px),
@@ -64,6 +66,111 @@ textarea {
   );
   background-size: 100% 2rem;
   line-height: 2rem;
+}
+
+.rich-editor-content[contenteditable="false"] {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.rich-editor-content > * {
+  margin: 0 0 0.7rem;
+}
+
+.rich-editor-title {
+  font-family: var(--font-newsreader), serif;
+  font-size: 1.65em;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.rich-editor-subtitle {
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 1.05em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.rich-editor-quote {
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  font-style: italic;
+  margin-left: 0.25rem;
+  padding-left: 1rem;
+}
+
+.rich-editor-ul,
+.rich-editor-ol {
+  margin: 0 0 0.7rem 1.5rem;
+}
+
+.rich-editor-ul {
+  list-style: disc;
+}
+
+.rich-editor-ol {
+  list-style: decimal;
+}
+
+.rich-editor-list-item {
+  padding-left: 0.2rem;
+}
+
+.rich-editor-nested-list {
+  list-style: none;
+}
+
+.rich-editor-link {
+  color: #304f73;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.15em;
+}
+
+.toolbar-select-label {
+  display: inline-flex;
+}
+
+.toolbar-select {
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-height: 2.25rem;
+  outline: none;
+  padding: 0 1.75rem 0 0.65rem;
+}
+
+.toolbar-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.toolbar-palette {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0 0.25rem;
+}
+
+.toolbar-palette > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.toolbar-swatch {
+  border-radius: 999px;
+  height: 1.45rem;
+  outline: none;
+  width: 1.45rem;
+}
+
+.toolbar-swatch:focus-visible {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
 }
 
 .writing-progress {

@@ -51,6 +51,7 @@ export async function migrateAnonymousEntries(
       conflicts.push({
         entryDate: local.entryDate,
         localContent: local.content,
+        localRichContent: local.richContent,
         remote,
       });
       continue;
@@ -66,6 +67,7 @@ export async function migrateAnonymousEntries(
       content: local.content,
       entryDate: local.entryDate,
       expectedVersion: 0,
+      richContent: local.richContent,
       wordCount: countWords(local.content),
     });
 
@@ -73,6 +75,7 @@ export async function migrateAnonymousEntries(
       conflicts.push({
         entryDate: local.entryDate,
         localContent: local.content,
+        localRichContent: local.richContent,
         remote: result.remote,
       });
       continue;
@@ -110,6 +113,7 @@ export async function reconcileDirtyCaches(
       conflicts.push({
         entryDate: cache.entryDate,
         localContent: cache.content,
+        localRichContent: cache.richContent,
         remote,
       });
       continue;
@@ -119,6 +123,7 @@ export async function reconcileDirtyCaches(
       content: cache.content,
       entryDate: cache.entryDate,
       expectedVersion: remote?.version ?? 0,
+      richContent: cache.richContent,
       wordCount: cache.wordCount,
     });
     if (result.status === "saved") {
@@ -127,6 +132,7 @@ export async function reconcileDirtyCaches(
       conflicts.push({
         entryDate: cache.entryDate,
         localContent: cache.content,
+        localRichContent: cache.richContent,
         remote: result.remote,
       });
     }

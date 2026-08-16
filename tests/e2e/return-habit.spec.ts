@@ -124,8 +124,8 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await page.getByLabel("Writing navigation").getByRole("button", { name: "Calendar" }).click();
     await page.getByRole("dialog", { name: "A record of showing up." })
       .getByRole("button", { name: `${yesterday}: complete, 100 words` }).click();
-    const pastEditor = page.locator("textarea");
-    await expect(pastEditor).toHaveValue("Yesterday was complete.");
+    const pastEditor = page.locator('[contenteditable="true"]');
+    await expect(pastEditor).toHaveText("Yesterday was complete.");
     await pastEditor.fill("Yesterday was updated safely.");
     await expect(page.getByText("Saved to cloud", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Return to today" }).first().click();

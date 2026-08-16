@@ -11,6 +11,7 @@ function savedEntry(input: PendingCloudSave, version: number): CloudEntry {
     createdAt: "2026-08-16T00:00:00.000Z",
     entryDate: input.entryDate,
     id: "entry-id",
+    richContent: input.richContent,
     updatedAt: "2026-08-16T00:00:00.000Z",
     userId: "user-id",
     version,
@@ -23,6 +24,7 @@ function input(content: string, expectedVersion = 1): PendingCloudSave {
     content,
     entryDate: "2026-08-16",
     expectedVersion,
+    richContent: null,
     wordCount: content.split(" ").length,
   };
 }
