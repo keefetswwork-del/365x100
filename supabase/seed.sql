@@ -1,0 +1,1 @@
+-- Build 2 uses isolated test setup rather than shared seed data.

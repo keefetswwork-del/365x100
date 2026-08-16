@@ -16,7 +16,7 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
 
   await editor.fill(firstNinetyNineWords);
   await expect(page.getByText("99 / 100 words")).toBeVisible();
-  await expect(page.getByText("Saving…")).toBeVisible();
+  await expect(page.getByText("Saving locally…")).toBeVisible();
 
   const completedEntry = `${firstNinetyNineWords} finished`;
   await editor.fill(completedEntry);
@@ -25,7 +25,7 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Today is complete." }),
   ).toBeVisible();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText("Saved on this device", { exact: true })).toBeVisible();
 
   const storedDraft = await page.evaluate(() => {
     const entryKey = Object.keys(localStorage).find((key) =>
@@ -49,7 +49,9 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   await page
     .getByRole("button", { name: "Save your entry and begin your year" })
     .click();
-  await expect(page.getByText("Accounts are coming next.")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Begin your year." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+  await expect(editor).toHaveValue(completedEntry);
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(editor).toBeVisible();
