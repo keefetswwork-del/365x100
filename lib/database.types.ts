@@ -34,6 +34,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_prompt_assignments: {
+        Row: {
+          created_at: string
+          entry_date: string
+          prompt_id: number
+          refreshed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_date: string
+          prompt_id: number
+          refreshed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_date?: string
+          prompt_id?: number
+          refreshed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [{
+          foreignKeyName: "daily_prompt_assignments_prompt_id_fkey"
+          columns: ["prompt_id"]
+          isOneToOne: false
+          referencedRelation: "prompts"
+          referencedColumns: ["id"]
+        }]
+      }
+      email_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          kind: string
+          last_error_code: string | null
+          next_attempt_at: string | null
+          period_end: string
+          period_start: string
+          provider_id: string | null
+          review_date: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          last_error_code?: string | null
+          next_attempt_at?: string | null
+          period_end: string
+          period_start: string
+          provider_id?: string | null
+          review_date: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          last_error_code?: string | null
+          next_attempt_at?: string | null
+          period_end?: string
+          period_start?: string
+          provider_id?: string | null
+          review_date?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       entries: {
         Row: {
           completed_at: string | null
@@ -70,33 +151,162 @@ export type Database = {
         }
         Relationships: []
       }
+      product_events: {
+        Row: {
+          dedupe_key: string
+          entry_date: string | null
+          event_name: string
+          id: number
+          occurred_at: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          dedupe_key: string
+          entry_date?: string | null
+          event_name: string
+          id?: number
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          dedupe_key?: string
+          entry_date?: string | null
+          event_name?: string
+          id?: number
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
+          daily_prompts_enabled: boolean
+          habit_onboarding_completed: boolean
+          last_welcome_back_date: string | null
           timezone: string
           updated_at: string
           user_id: string
+          weekly_review_day: number
+          weekly_review_enabled: boolean
+          weekly_review_time: string
         }
         Insert: {
           created_at?: string
+          daily_prompts_enabled?: boolean
+          habit_onboarding_completed?: boolean
+          last_welcome_back_date?: string | null
           timezone: string
           updated_at?: string
           user_id: string
+          weekly_review_day?: number
+          weekly_review_enabled?: boolean
+          weekly_review_time?: string
         }
         Update: {
           created_at?: string
+          daily_prompts_enabled?: boolean
+          habit_onboarding_completed?: boolean
+          last_welcome_back_date?: string | null
           timezone?: string
           updated_at?: string
           user_id?: string
+          weekly_review_day?: number
+          weekly_review_enabled?: boolean
+          weekly_review_time?: string
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          active: boolean
+          body: string
+          category: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          category: string
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          category?: string
+          created_at?: string
+          id?: number
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      product_metrics_daily: {
+        Row: {
+          actor_count: number | null
+          event_count: number | null
+          event_date: string | null
+          event_name: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      claim_due_weekly_reviews: {
+        Args: { p_limit?: number; p_now?: string }
+        Returns: {
+          current_streak: number
+          delivery_id: string
+          email: string
+          month_completed: number
+          month_words: number
+          period_end: string
+          period_start: string
+          review_date: string
+          timezone: string
+          user_id: string
+          week_completed: number
+          week_words: number
+          year_completed: number
+          year_words: number
+        }[]
+      }
+      finish_weekly_review: {
+        Args: { p_delivery_id: string; p_error_code?: string; p_provider_id?: string }
+        Returns: undefined
+      }
+      get_daily_prompt: {
+        Args: { p_entry_date: string; p_refresh?: boolean }
+        Returns: {
+          active: boolean
+          body: string
+          category: string
+          created_at: string
+          id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "prompts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_habit_dashboard: { Args: { p_month?: string }; Returns: Json }
+      habit_streaks: {
+        Args: { p_today: string; p_user_id: string }
+        Returns: { current_streak: number; longest_streak: number }[]
+      }
       is_valid_timezone: { Args: { value: string }; Returns: boolean }
+      mark_welcome_back: { Args: { p_entry_date: string }; Returns: string }
+      record_product_event: {
+        Args: { p_entry_date?: string; p_event_name: string; p_session_id?: string }
+        Returns: boolean
+      }
       save_entry: {
         Args: {
           p_content: string
@@ -106,13 +316,46 @@ export type Database = {
         }
         Returns: Json
       }
+      set_habit_preferences: {
+        Args: {
+          p_daily_prompts_enabled: boolean
+          p_habit_onboarding_completed: boolean
+          p_weekly_review_day: number
+          p_weekly_review_enabled: boolean
+          p_weekly_review_time: string
+        }
+        Returns: {
+          created_at: string
+          daily_prompts_enabled: boolean
+          habit_onboarding_completed: boolean
+          last_welcome_back_date: string | null
+          timezone: string
+          updated_at: string
+          user_id: string
+          weekly_review_day: number
+          weekly_review_enabled: boolean
+          weekly_review_time: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_profile_timezone: {
         Args: { p_timezone: string }
         Returns: {
           created_at: string
+          daily_prompts_enabled: boolean
+          habit_onboarding_completed: boolean
+          last_welcome_back_date: string | null
           timezone: string
           updated_at: string
           user_id: string
+          weekly_review_day: number
+          weekly_review_enabled: boolean
+          weekly_review_time: string
         }
         SetofOptions: {
           from: "*"

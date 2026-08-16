@@ -13,7 +13,8 @@ type SaveExecutor = (input: PendingCloudSave) => Promise<SaveEntryResult>;
 
 export class CloudSaveQueue {
   private active = false;
-  private pending: PendingCloudSave | null = null;
+  private readonly pendingByDate = new Map<string, PendingCloudSave>();
+  private readonly pendingOrder: string[] = [];
   private retryAttempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
@@ -26,14 +27,17 @@ export class CloudSaveQueue {
   ) {}
 
   enqueue(input: PendingCloudSave): void {
-    this.pending = input;
+    if (!this.pendingByDate.has(input.entryDate)) {
+      this.pendingOrder.push(input.entryDate);
+    }
+    this.pendingByDate.set(input.entryDate, input);
     this.retryAttempt = 0;
     this.clearRetry();
     void this.drain();
   }
 
   retryNow(): void {
-    if (!this.pending || this.stopped) {
+    if (this.pendingOrder.length === 0 || this.stopped) {
       return;
     }
 
@@ -44,7 +48,8 @@ export class CloudSaveQueue {
 
   stop(): void {
     this.stopped = true;
-    this.pending = null;
+    this.pendingByDate.clear();
+    this.pendingOrder.length = 0;
     this.clearRetry();
   }
 
@@ -56,33 +61,45 @@ export class CloudSaveQueue {
   }
 
   private async drain(): Promise<void> {
-    if (this.active || !this.pending || this.stopped || this.retryTimer) {
+    const nextDate = this.pendingOrder[0];
+    if (this.active || !nextDate || this.stopped || this.retryTimer) {
       return;
     }
 
     this.active = true;
-    const input = this.pending;
-    this.pending = null;
+    this.pendingOrder.shift();
+    const input = this.pendingByDate.get(nextDate);
+    this.pendingByDate.delete(nextDate);
+    if (!input) {
+      this.active = false;
+      void this.drain();
+      return;
+    }
     this.callbacks.onSaving();
 
     try {
       const result = await this.execute(input);
       if (result.status === "conflict") {
-        const conflictInput = this.pending ?? input;
-        this.pending = null;
+        const conflictInput = this.pendingByDate.get(input.entryDate) ?? input;
+        this.pendingByDate.delete(input.entryDate);
+        const queuedIndex = this.pendingOrder.indexOf(input.entryDate);
+        if (queuedIndex >= 0) this.pendingOrder.splice(queuedIndex, 1);
         this.callbacks.onConflict(conflictInput, result);
         return;
       }
 
       this.retryAttempt = 0;
       // TypeScript cannot observe that enqueue may run while the request is awaiting.
-      const queuedAfterRequest = this.pending as PendingCloudSave | null;
-      if (queuedAfterRequest?.entryDate === result.entry.entryDate) {
+      const queuedAfterRequest = this.pendingByDate.get(result.entry.entryDate);
+      if (queuedAfterRequest) {
         queuedAfterRequest.expectedVersion = result.entry.version;
       }
       this.callbacks.onSaved(result);
     } catch (error) {
-      this.pending ??= input;
+      if (!this.pendingByDate.has(input.entryDate)) {
+        this.pendingByDate.set(input.entryDate, input);
+        this.pendingOrder.unshift(input.entryDate);
+      }
       if (error instanceof CloudRequestError && !error.retryable) {
         this.callbacks.onError();
         return;
@@ -105,7 +122,7 @@ export class CloudSaveQueue {
       }, delay);
     } finally {
       this.active = false;
-      if (!this.retryTimer && this.pending && this.retryAttempt === 0) {
+      if (!this.retryTimer && this.pendingOrder.length > 0 && this.retryAttempt === 0) {
         void this.drain();
       }
     }

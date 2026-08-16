@@ -68,6 +68,8 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
   await expect(page.getByRole("dialog", { name: "When does your day end?" })).toBeVisible();
   await expect(editor).toHaveValue(originalDraft);
   await page.getByRole("button", { name: /^Use / }).click();
+  await expect(page.getByRole("dialog", { name: "See the week you wrote." })).toBeVisible();
+  await page.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByText("Saved to cloud", { exact: true })).toBeVisible();
   await expect(editor).toHaveValue(originalDraft);
   await expect.poll(() => page.evaluate(() =>
@@ -102,11 +104,11 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
   await secondContext.setOffline(false);
   await expect(secondPage.getByText("Saved to cloud", { exact: true })).toBeVisible();
 
-  await secondPage.getByRole("button", { name: "Account" }).click();
+  await secondPage.getByLabel("Writing navigation").getByRole("button", { name: "Account" }).click();
   await secondPage.getByRole("button", { name: "Sign out" }).click();
   await expect(secondPage.getByRole("button", { name: "Sign in" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByLabel("Writing navigation").getByRole("button", { name: "Account" }).click();
   await page.getByLabel("Type DELETE to confirm account deletion").fill("DELETE");
   await page.getByRole("button", { name: "Permanently delete my account" }).click();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();

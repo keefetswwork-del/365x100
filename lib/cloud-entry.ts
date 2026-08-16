@@ -31,10 +31,20 @@ function mapEntry(row: EntryRow): CloudEntry {
 function mapProfile(row: ProfileRow): Profile {
   return {
     createdAt: row.created_at,
+    dailyPromptsEnabled: row.daily_prompts_enabled,
+    habitOnboardingCompleted: row.habit_onboarding_completed,
+    lastWelcomeBackDate: row.last_welcome_back_date,
     timezone: row.timezone,
     updatedAt: row.updated_at,
     userId: row.user_id,
+    weeklyReviewDay: row.weekly_review_day,
+    weeklyReviewEnabled: row.weekly_review_enabled,
+    weeklyReviewTime: row.weekly_review_time,
   };
+}
+
+export function mapProfileRow(row: ProfileRow): Profile {
+  return mapProfile(row);
 }
 
 function isObject(value: Json): value is { [key: string]: Json | undefined } {

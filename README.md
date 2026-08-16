@@ -2,7 +2,8 @@
 
 A mobile-first daily writing practice built with Next.js, TypeScript, Tailwind CSS,
 and Supabase. Anonymous writing remains browser-local; signed-in writing is cached
-on the device and synchronized to a user-owned cloud entry.
+on the device and synchronized to a user-owned cloud entry. Signed-in writers can
+also use calendar progress, streaks, optional prompts, and text-free weekly reviews.
 
 ## Environment
 
@@ -62,12 +63,20 @@ environment values above, using `https://365x100.com` for `NEXT_PUBLIC_SITE_URL`
 
 Before production acceptance:
 
-1. Link this repository to the dedicated Singapore Supabase project.
-2. Apply migrations with `npx supabase db push` and deploy `delete-account`.
-3. Set the Supabase Site URL to `https://365x100.com` and allow localhost plus the Render fallback URL.
-4. Configure Google OAuth with the callback URL shown by Supabase.
-5. Verify `mail.365x100.com` in Resend and configure Supabase custom SMTP.
-6. Point `365x100.com` to Render and redeploy the static site.
+1. Link this repository to the production Supabase project.
+2. Preview and apply migrations with `npx supabase db push --dry-run` and `npx supabase db push`.
+3. Deploy `delete-account` and `send-weekly-reviews` with `npx supabase functions deploy <name>`.
+4. Set the Edge Function-only `RESEND_API_KEY`, `CRON_SECRET`, and `SITE_URL` secrets with `npx supabase secrets set`.
+5. Store `project_url` and the matching `cron_secret` in Supabase Vault, then run `supabase/cron/weekly-reviews.sql` once.
+6. Set the Supabase Site URL to `https://365x100.com` and allow localhost plus the Render fallback URL.
+7. Configure Google OAuth with the callback URL shown by Supabase.
+8. Keep Resend custom SMTP for Auth OTPs and use a separate sending-only Resend key for weekly reviews.
+9. Point `365x100.com` to Render and redeploy the static site.
 
-Build 2 does not include streaks, reminders, analytics, payments, exports, or PWA
-installation.
+Never add `CRON_SECRET`, `RESEND_API_KEY`, a Supabase secret/service-role key, or
+Vault values to Render or any `NEXT_PUBLIC_*` variable. Weekly emails contain only
+counts and streaks; they do not read or send entry content. Service-only KPI queries
+are documented in `supabase/queries/build_3_kpis.sql`.
+
+Build 3 excludes daily reminders, search, exports, generated books, payments, and
+PWA installation.

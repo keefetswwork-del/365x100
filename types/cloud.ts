@@ -12,6 +12,12 @@ export type CloudSaveStatus =
 export interface Profile {
   userId: string;
   timezone: string;
+  dailyPromptsEnabled: boolean;
+  habitOnboardingCompleted: boolean;
+  lastWelcomeBackDate: string | null;
+  weeklyReviewDay: number;
+  weeklyReviewEnabled: boolean;
+  weeklyReviewTime: string;
   createdAt: string;
   updatedAt: string;
 }

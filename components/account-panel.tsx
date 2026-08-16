@@ -3,30 +3,39 @@
 import { useState, type FormEvent } from "react";
 
 import { getSupportedTimeZones, isValidTimeZone } from "@/lib/timezone";
+import type { HabitPreferences } from "@/types/habit";
 
 interface AccountPanelProps {
   email: string;
+  habitPreferences: HabitPreferences;
   open: boolean;
   timezone: string;
   onClose: () => void;
   onDelete: () => Promise<void>;
   onSaveTimezone: (timezone: string) => Promise<void>;
+  onSaveHabitPreferences: (preferences: HabitPreferences) => Promise<void>;
   onSignOut: () => Promise<void>;
 }
 
 export function AccountPanel({
   email,
+  habitPreferences,
   open,
   timezone,
   onClose,
   onDelete,
   onSaveTimezone,
+  onSaveHabitPreferences,
   onSignOut,
 }: AccountPanelProps) {
   const [timezoneValue, setTimezoneValue] = useState(timezone);
   const [deleteValue, setDeleteValue] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [message, setMessage] = useState("");
+  const [dailyPromptsEnabled, setDailyPromptsEnabled] = useState(habitPreferences.dailyPromptsEnabled);
+  const [weeklyReviewEnabled, setWeeklyReviewEnabled] = useState(habitPreferences.weeklyReview.enabled);
+  const [weeklyReviewDay, setWeeklyReviewDay] = useState(habitPreferences.weeklyReview.day);
+  const [weeklyReviewTime, setWeeklyReviewTime] = useState(habitPreferences.weeklyReview.time.slice(0, 5));
 
   if (!open) {
     return null;
@@ -61,6 +70,28 @@ export function AccountPanel({
     }
   }
 
+  async function saveHabits(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsWorking(true);
+    setMessage("");
+    try {
+      await onSaveHabitPreferences({
+        dailyPromptsEnabled,
+        onboardingCompleted: true,
+        weeklyReview: {
+          day: weeklyReviewDay,
+          enabled: weeklyReviewEnabled,
+          time: weeklyReviewTime,
+        },
+      });
+      setMessage("Writing rhythm saved.");
+    } catch {
+      setMessage("Writing rhythm could not be saved.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-[rgba(19,35,31,0.45)] backdrop-blur-sm sm:place-items-center sm:p-6">
       <section aria-labelledby="account-title" aria-modal="true" role="dialog" className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] bg-[var(--paper)] p-6 shadow-2xl sm:rounded-[2rem] sm:p-8">
@@ -78,6 +109,18 @@ export function AccountPanel({
           <input id="account-timezone" list="account-timezones" value={timezoneValue} onChange={(event) => setTimezoneValue(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]" />
           <datalist id="account-timezones">{getSupportedTimeZones().map((option) => <option key={option} value={option} />)}</datalist>
           <button type="submit" disabled={isWorking || timezoneValue === timezone} className="mt-3 rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">Save timezone</button>
+        </form>
+
+        <form onSubmit={saveHabits} className="mt-5 rounded-2xl border border-[var(--line)] bg-white/55 p-5">
+          <h3 className="font-serif text-2xl">Your writing rhythm</h3>
+          <label className="mt-4 flex items-center gap-3 font-bold"><input type="checkbox" checked={dailyPromptsEnabled} onChange={(event) => setDailyPromptsEnabled(event.target.checked)} className="h-5 w-5 accent-[var(--accent)]" />Offer a fresh writing prompt each day</label>
+          <label className="mt-4 flex items-center gap-3 font-bold"><input type="checkbox" checked={weeklyReviewEnabled} onChange={(event) => setWeeklyReviewEnabled(event.target.checked)} className="h-5 w-5 accent-[var(--accent)]" />Email my weekly progress review</label>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <label className="text-sm font-bold">Review day<select value={weeklyReviewDay} disabled={!weeklyReviewEnabled} onChange={(event) => setWeeklyReviewDay(Number(event.target.value))} className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"><option value={1}>Monday</option><option value={2}>Tuesday</option><option value={3}>Wednesday</option><option value={4}>Thursday</option><option value={5}>Friday</option><option value={6}>Saturday</option><option value={7}>Sunday</option></select></label>
+            <label className="text-sm font-bold">Review time<input type="time" value={weeklyReviewTime} disabled={!weeklyReviewEnabled} onChange={(event) => setWeeklyReviewTime(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50" /></label>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Weekly reviews include counts and streaks only, never journal text.</p>
+          <button type="submit" disabled={isWorking} className="mt-4 rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">Save writing rhythm</button>
         </form>
 
         <button type="button" disabled={isWorking} onClick={() => void onSignOut()} className="mt-6 w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-60">Sign out</button>

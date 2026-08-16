@@ -27,6 +27,10 @@ function input(content: string, expectedVersion = 1): PendingCloudSave {
   };
 }
 
+function datedInput(entryDate: string, content: string, expectedVersion = 1): PendingCloudSave {
+  return { ...input(content, expectedVersion), entryDate };
+}
+
 test("coalesces active writes and carries the confirmed version forward", async () => {
   let releaseFirst: (() => void) | undefined;
   const firstGate = new Promise<void>((resolve) => {
@@ -123,5 +127,41 @@ test("reports the newest coalesced content when the remote version conflicts", a
 
   await expect.poll(() => reviewed).not.toBeNull();
   expect(reviewed).toMatchObject({ content: "latest" });
+  queue.stop();
+});
+
+test("keeps the latest pending content for every date", async () => {
+  let releaseFirst: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const calls: PendingCloudSave[] = [];
+  const queue = new CloudSaveQueue(
+    async (pending) => {
+      calls.push({ ...pending });
+      if (calls.length === 1) await gate;
+      return { status: "saved", entry: savedEntry(pending, pending.expectedVersion + 1) };
+    },
+    {
+      onConflict: () => undefined,
+      onError: () => undefined,
+      onRetry: () => undefined,
+      onSaved: () => undefined,
+      onSaving: () => undefined,
+    },
+    1,
+  );
+
+  queue.enqueue(datedInput("2026-08-15", "old first"));
+  await expect.poll(() => calls.length).toBe(1);
+  queue.enqueue(datedInput("2026-08-16", "today first"));
+  queue.enqueue(datedInput("2026-08-15", "old latest"));
+  queue.enqueue(datedInput("2026-08-16", "today latest"));
+  releaseFirst?.();
+
+  await expect.poll(() => calls.length).toBe(3);
+  expect(calls.map((call) => [call.entryDate, call.content])).toEqual([
+    ["2026-08-15", "old first"],
+    ["2026-08-16", "today latest"],
+    ["2026-08-15", "old latest"],
+  ]);
   queue.stop();
 });
