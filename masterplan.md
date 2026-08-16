@@ -106,10 +106,10 @@ Build:
 Current streak
 Longest streak
 Calendar of completed days
-Daily email reminders
-Reminder-time settings
-Missed-day state
-Optional daily prompts
+Weekly stat review email
+Reminder-time settings with monthly book + yearly book completion
+Missed-day state (3 days, 1 week, welcome back)
+Refresh daily prompts (Toggle if user wants a new prompt daily or not. build database 150 prompts relevant to the 100 words and users life in order to get a good monthly or annual book
 Basic progress statistics
 Success criteria
 Streaks calculate correctly across timezones.
