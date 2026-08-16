@@ -2,7 +2,20 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(14);
+
+select ok(
+  not has_function_privilege('anon', 'public.is_valid_timezone(text)', 'EXECUTE'),
+  'anonymous users cannot execute timezone validation'
+);
+select ok(
+  not has_function_privilege('anon', 'public.set_profile_timezone(text)', 'EXECUTE'),
+  'anonymous users cannot update profiles through the timezone RPC'
+);
+select ok(
+  not has_function_privilege('anon', 'public.save_entry(date,text,integer,bigint)', 'EXECUTE'),
+  'anonymous users cannot write through the entry RPC'
+);
 
 insert into auth.users (id, email, aud, role, created_at, updated_at)
 values

@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3100",
     trace: "retain-on-failure",
   },
   projects: [
@@ -19,8 +19,17 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    command: "npm run dev -- -p 3100",
+    url: "http://localhost:3100",
+    reuseExistingServer: false,
+    env: {
+      ...process.env,
+      // Authenticated browser tests use local Supabase and Mailpit, regardless
+      // of which hosted project the developer has in .env.local.
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+        "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH",
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3100",
+    },
   },
 });
