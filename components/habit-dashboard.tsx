@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useEffectEvent, useRef } from "react";
+
 import { buildCalendarGrid, formatMonth } from "@/lib/habit";
 import type { HabitSummary } from "@/types/habit";
 
@@ -10,6 +12,7 @@ interface HabitDashboardProps {
   onPreviousMonth: () => void;
   onSelectDate: (date: string) => void;
   open: boolean;
+  selectedDate: string;
   summary: HabitSummary | null;
 }
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -29,15 +32,71 @@ export function HabitDashboard({
   onPreviousMonth,
   onSelectDate,
   open,
+  selectedDate,
   summary,
 }: HabitDashboardProps) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const dayRefs = useRef(new Map<string, HTMLButtonElement>());
+  const closeDialog = useEffectEvent(onClose);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const dialog = dialogRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDialog();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
   if (!open) return null;
   const days = summary ? buildCalendarGrid(summary) : [];
   const canMoveForward = Boolean(summary && summary.visibleMonth < summary.today.slice(0, 7) + "-01");
 
+  function moveCalendarFocus(currentIndex: number, offset: number) {
+    const target = days[currentIndex + offset];
+    if (!target) return;
+    dayRefs.current.get(target.date)?.focus();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-[rgba(19,35,31,0.45)] backdrop-blur-sm sm:place-items-center sm:p-6">
-      <section aria-labelledby="habit-title" aria-modal="true" role="dialog" className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-[2rem] bg-[var(--paper)] p-5 shadow-2xl sm:rounded-[2rem] sm:p-8">
+    <div className="fixed inset-0 z-50 grid place-items-end bg-[rgba(19,35,31,0.45)] backdrop-blur-sm sm:place-items-center sm:p-6" onMouseDown={onClose}>
+      <section ref={dialogRef} tabIndex={-1} aria-labelledby="habit-title" aria-modal="true" role="dialog" className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-[2rem] bg-[var(--paper)] p-5 shadow-2xl outline-none sm:rounded-[2rem] sm:p-8" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">Your year so far</p>
@@ -77,16 +136,35 @@ export function HabitDashboard({
                 {WEEKDAYS.map((day) => <span key={day}>{day}</span>)}
               </div>
               <div className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">
-                {days.map((day) => {
+                {days.map((day, index) => {
                   const selectable = day.inVisibleMonth && day.state !== "future" && day.state !== "before-start";
+                  const selected = day.date === selectedDate;
                   return (
                     <button
                       key={day.date}
+                      ref={(node) => {
+                        if (node) dayRefs.current.set(day.date, node);
+                        else dayRefs.current.delete(day.date);
+                      }}
                       type="button"
                       disabled={!selectable}
                       onClick={() => onSelectDate(day.date)}
+                      onKeyDown={(event) => {
+                        const offsets: Partial<Record<string, number>> = {
+                          ArrowDown: 7,
+                          ArrowLeft: -1,
+                          ArrowRight: 1,
+                          ArrowUp: -7,
+                        };
+                        const offset = offsets[event.key];
+                        if (!offset) return;
+                        event.preventDefault();
+                        moveCalendarFocus(index, offset);
+                      }}
+                      aria-current={day.isToday ? "date" : undefined}
+                      aria-pressed={selected}
                       aria-label={`${day.date}: ${day.state}${day.wordCount ? `, ${day.wordCount} words` : ""}`}
-                      className={`aspect-square rounded-xl text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${stateClass(day.state)} ${day.isToday ? "ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--paper)]" : ""} ${day.inVisibleMonth ? "" : "opacity-30"}`}
+                      className={`aspect-square rounded-xl text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${stateClass(day.state)} ${selected ? "ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--paper)]" : day.isToday ? "ring-2 ring-[var(--sage)] ring-offset-2 ring-offset-[var(--paper)]" : ""} ${day.inVisibleMonth ? "" : "opacity-30"}`}
                     >
                       {day.dayOfMonth}
                     </button>

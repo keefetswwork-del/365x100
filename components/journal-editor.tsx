@@ -42,14 +42,16 @@ import {
   saveEntry,
   saveRichEntry,
 } from "@/lib/entry-storage";
-import { formatLocalDate, getLocalDateString } from "@/lib/local-date";
+import { getLocalDateString } from "@/lib/local-date";
 import {
   fetchDailyPrompt,
   fetchHabitSummary,
+  formatStreakLabel,
   markWelcomeBack,
   missedDayMessage,
   monthStart,
   saveHabitPreferences,
+  shiftDate,
   shiftMonth,
 } from "@/lib/habit";
 import {
@@ -93,17 +95,17 @@ function mergeConflicts(
   );
 }
 
-function formatEntryDate(entryDate: string, today: string): string {
+function formatEntryDate(entryDate: string, compact = false): string {
   if (!entryDate) return "Today";
   const [year, month, day] = entryDate.split("-").map(Number);
   const label = new Intl.DateTimeFormat("en", {
     day: "numeric",
-    month: "long",
+    month: compact ? "short" : "long",
     timeZone: "UTC",
-    weekday: "long",
+    weekday: compact ? "short" : "long",
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, day)));
-  return entryDate === today ? label : label;
+  return label;
 }
 
 function preferencesFromProfile(profile: Profile): HabitPreferences {
@@ -146,6 +148,7 @@ export function JournalEditor() {
   const [dailyPrompt, setDailyPrompt] = useState<DailyPrompt | null>(null);
   const [promptWorking, setPromptWorking] = useState(false);
   const [pastEntryUnavailable, setPastEntryUnavailable] = useState(false);
+  const [dateNavigationWorking, setDateNavigationWorking] = useState(false);
   const [welcomeBackVisible, setWelcomeBackVisible] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
@@ -165,6 +168,11 @@ export function JournalEditor() {
   const habitSummaryRef = useRef<HabitSummary | null>(null);
   const todayDateRef = useRef("");
   const analyticsStartedRef = useRef(false);
+  const dateNavigationWorkingRef = useRef(false);
+  const dateTriggerRef = useRef<HTMLButtonElement>(null);
+  const editorSectionRef = useRef<HTMLElement>(null);
+  const focusEditorAfterLoadRef = useRef(false);
+  const pastEntryUnavailableRef = useRef(false);
 
   const wordCount = countWords(entry);
   const progress = Math.min(wordCount, WORD_TARGET);
@@ -253,8 +261,9 @@ export function JournalEditor() {
       setEditorLoadKey((value) => value + 1);
       setLocalDate(today);
       setTodayDate(today);
-      setDateLabel(formatLocalDate(date));
+      setDateLabel(formatEntryDate(today));
       setDailyPrompt(null);
+      pastEntryUnavailableRef.current = false;
       setPastEntryUnavailable(false);
       setHasCompleted(restoredWordCount >= WORD_TARGET);
       setSaveStatus("saved-local");
@@ -337,13 +346,14 @@ export function JournalEditor() {
     knownConflicts = conflictsRef.current,
   ) {
     setIsReady(false);
+    pastEntryUnavailableRef.current = false;
     setPastEntryUnavailable(false);
     setWelcomeBackVisible(false);
     setDailyPrompt(null);
     analyticsStartedRef.current = false;
     localDateRef.current = entryDate;
     setLocalDate(entryDate);
-    setDateLabel(formatEntryDate(entryDate, todayDateRef.current));
+    setDateLabel(formatEntryDate(entryDate));
     const conflict = knownConflicts.find((item) => item.entryDate === entryDate);
     if (conflict) {
       const restoredCount = countWords(conflict.localContent);
@@ -361,6 +371,7 @@ export function JournalEditor() {
     const cache = loadCloudCache(activeSession.user.id, entryDate);
     if (!navigator.onLine) {
       if (!cache && entryDate !== todayDateRef.current) {
+        pastEntryUnavailableRef.current = true;
         setPastEntryUnavailable(true);
         setSaveStatus("offline");
         return;
@@ -401,6 +412,7 @@ export function JournalEditor() {
       void loadPromptForDate(activeClient, entryDate);
     } catch {
       if (!cache && entryDate !== todayDateRef.current) {
+        pastEntryUnavailableRef.current = true;
         setPastEntryUnavailable(true);
         setSaveStatus(navigator.onLine ? "error" : "offline");
         return;
@@ -461,7 +473,7 @@ export function JournalEditor() {
 
   function persistCurrentImmediately() {
     const currentDate = localDateRef.current;
-    if (!currentDate) {
+    if (!currentDate || pastEntryUnavailableRef.current) {
       return;
     }
 
@@ -807,8 +819,22 @@ export function JournalEditor() {
   }
 
   function openHabitDashboard() {
+    const visibleDate = localDateRef.current || todayDateRef.current;
+    if (visibleDate) {
+      const selectedMonth = monthStart(visibleDate);
+      habitMonthRef.current = selectedMonth;
+      if (habitSummaryRef.current?.visibleMonth !== selectedMonth) {
+        void refreshHabitDashboard(selectedMonth);
+      }
+    } else if (!habitSummaryRef.current) {
+      void refreshHabitDashboard();
+    }
     setHabitOpen(true);
-    if (!habitSummaryRef.current) void refreshHabitDashboard();
+  }
+
+  function closeHabitDashboard() {
+    setHabitOpen(false);
+    window.requestAnimationFrame(() => dateTriggerRef.current?.focus());
   }
 
   async function changeHabitMonth(offset: number) {
@@ -816,19 +842,61 @@ export function JournalEditor() {
     await refreshHabitDashboard(nextMonth);
   }
 
-  async function selectEntryDate(entryDate: string) {
-    if (!client || !session || !profile || entryDate > todayDateRef.current) return;
-    persistCurrentImmediately();
+  function focusEntryEditor() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const editable = editorSectionRef.current?.querySelector<HTMLElement>('[contenteditable="true"]');
+        (editable ?? editorSectionRef.current)?.focus();
+      });
+    });
+  }
+
+  useEffect(() => {
+    if (!isReady || !focusEditorAfterLoadRef.current) return;
+    focusEditorAfterLoadRef.current = false;
+    focusEntryEditor();
+  }, [editorLoadKey, isReady]);
+
+  async function navigateToEntryDate(entryDate: string) {
+    if (
+      !client ||
+      !session ||
+      !profile ||
+      dateNavigationWorkingRef.current ||
+      entryDate > todayDateRef.current
+    ) return;
+
     setHabitOpen(false);
+    if (entryDate === localDateRef.current) {
+      focusEntryEditor();
+      return;
+    }
+
+    dateNavigationWorkingRef.current = true;
+    setDateNavigationWorking(true);
+    persistCurrentImmediately();
     hasEditedRef.current = false;
-    await loadSignedInDate(client, session, profile, entryDate);
+    focusEditorAfterLoadRef.current = true;
+    try {
+      await loadSignedInDate(client, session, profile, entryDate);
+    } finally {
+      dateNavigationWorkingRef.current = false;
+      setDateNavigationWorking(false);
+    }
+  }
+
+  async function selectEntryDate(entryDate: string) {
+    await navigateToEntryDate(entryDate);
   }
 
   async function returnToToday() {
-    if (!client || !session || !profile || localDateRef.current === todayDateRef.current) return;
-    persistCurrentImmediately();
-    hasEditedRef.current = false;
-    await loadSignedInDate(client, session, profile, todayDateRef.current);
+    if (localDateRef.current === todayDateRef.current) return;
+    await navigateToEntryDate(todayDateRef.current);
+  }
+
+  async function navigateByDay(offset: number) {
+    const targetDate = shiftDate(localDateRef.current, offset);
+    await navigateToEntryDate(targetDate);
   }
 
   async function updateHabitPreferences(preferences: HabitPreferences) {
@@ -964,6 +1032,11 @@ export function JournalEditor() {
 
   const signedIn = Boolean(session);
   const isToday = !todayDate || localDate === todayDate;
+  const compactDateLabel = formatEntryDate(localDate, true);
+  const canNavigatePrevious = Boolean(
+    habitSummary?.firstEntryDate && localDate > habitSummary.firstEntryDate,
+  );
+  const canNavigateNext = Boolean(todayDate && localDate < todayDate);
   const promptHeading = dailyPrompt?.body ?? (isToday ? "What happened today?" : "What happened on this day?");
   const gapMessage = isToday && habitSummary ? missedDayMessage(habitSummary.missedDays) : null;
   const habitPreferences = profile ? preferencesFromProfile(profile) : null;
@@ -982,11 +1055,6 @@ export function JournalEditor() {
                 <span className={`h-2 w-2 shrink-0 rounded-full ${saveStatus === "error" || saveStatus === "conflict" ? "bg-red-700" : saveStatus.startsWith("saving") || saveStatus === "retrying" ? "bg-[var(--accent)]" : "bg-[var(--sage)]"}`} aria-hidden="true" />
                 <span aria-live="polite">{statusLabel[saveStatus]}</span>
               </p>
-              {signedIn && (
-                <button type="button" onClick={openHabitDashboard} className="hidden rounded-full border border-[var(--line)] bg-white/40 px-4 py-2 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:block">
-                  {habitSummary ? `${habitSummary.currentStreak} day streak` : "Calendar"}
-                </button>
-              )}
               <button
                 type="button"
                 disabled={!authResolved}
@@ -998,14 +1066,40 @@ export function JournalEditor() {
             </div>
           </header>
 
-          <div className="grid flex-1 gap-7 py-7 md:gap-10 md:py-10 lg:grid-cols-[0.38fr_0.62fr] lg:gap-16 lg:py-14">
+          <section aria-label={signedIn ? "Entry date navigation" : "Entry date"} className="flex flex-col items-center pt-7 text-center sm:pt-9">
+            {signedIn && (
+              <p className="min-h-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]" aria-live="polite">
+                {habitSummary ? formatStreakLabel(habitSummary.currentStreak) : "Loading your streak…"}
+              </p>
+            )}
+            <div className={`${signedIn ? "mt-2" : ""} grid grid-cols-[2.75rem_minmax(0,auto)_2.75rem] items-center gap-1 sm:gap-3`}>
+              {signedIn ? (
+                <button type="button" aria-label="Previous day" disabled={!canNavigatePrevious || dateNavigationWorking} onClick={() => void navigateByDay(-1)} className="grid h-11 w-11 place-items-center rounded-full text-2xl text-[var(--ink)] outline-none transition hover:bg-white/55 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:pointer-events-none disabled:opacity-25">←</button>
+              ) : <span aria-hidden="true" />}
+              {signedIn ? (
+                <button ref={dateTriggerRef} type="button" disabled={!profile || dateNavigationWorking} onClick={openHabitDashboard} aria-label={`Open calendar for ${dateLabel}`} className="group flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--accent-dark)] outline-none transition hover:bg-white/50 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50 sm:px-5 sm:tracking-[0.17em]">
+                  <time dateTime={localDate || undefined}><span className="sm:hidden">{compactDateLabel}</span><span className="hidden sm:inline">{dateLabel}</span></time>
+                  <span aria-hidden="true" className="text-base transition-transform group-hover:translate-y-0.5">▾</span>
+                </button>
+              ) : (
+                <time dateTime={localDate || undefined} className="min-h-11 content-center px-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--accent-dark)] sm:px-5 sm:tracking-[0.17em]"><span className="sm:hidden">{compactDateLabel}</span><span className="hidden sm:inline">{dateLabel}</span></time>
+              )}
+              {signedIn ? (
+                <button type="button" aria-label="Next day" disabled={!canNavigateNext || dateNavigationWorking} onClick={() => void navigateByDay(1)} className="grid h-11 w-11 place-items-center rounded-full text-2xl text-[var(--ink)] outline-none transition hover:bg-white/55 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:pointer-events-none disabled:opacity-25">→</button>
+              ) : <span aria-hidden="true" />}
+            </div>
+            {!isToday && (
+              <div className="mt-2 flex items-center gap-3 text-xs font-bold">
+                <span className="uppercase tracking-[0.14em] text-[var(--muted)]">Past entry</span>
+                <button type="button" disabled={dateNavigationWorking} onClick={() => void returnToToday()} className="rounded-full border border-[var(--line)] bg-white/40 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">Return to today</button>
+              </div>
+            )}
+          </section>
+
+          <div className="grid flex-1 gap-7 py-7 md:gap-10 md:py-10 lg:grid-cols-[0.38fr_0.62fr] lg:gap-16 lg:py-12">
             <section className="flex flex-col justify-between gap-6 lg:py-3">
               <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <time dateTime={localDate || undefined} className="text-sm font-bold uppercase tracking-[0.17em] text-[var(--accent-dark)]">{dateLabel}</time>
-                  {!isToday && <button type="button" onClick={() => void returnToToday()} className="rounded-full border border-[var(--line)] bg-white/40 px-3 py-1 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Return to today</button>}
-                </div>
-                <h1 className="mt-4 max-w-xl font-serif text-[clamp(2.7rem,8vw,5.5rem)] leading-[0.91] font-medium tracking-[-0.055em] text-[var(--ink)]">{promptHeading}</h1>
+                <h1 className="max-w-xl font-serif text-[clamp(2.7rem,8vw,5.5rem)] leading-[0.91] font-medium tracking-[-0.055em] text-[var(--ink)]">{promptHeading}</h1>
                 {dailyPrompt && isToday && profile?.dailyPromptsEnabled && (
                   <button type="button" disabled={promptWorking} onClick={() => void refreshPrompt()} className="mt-4 rounded-full border border-[var(--line)] bg-white/40 px-4 py-2 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">{promptWorking ? "Finding another…" : "Try another prompt"}</button>
                 )}
@@ -1018,7 +1112,7 @@ export function JournalEditor() {
               <p className="hidden max-w-xs border-l-2 border-[var(--sage)] pl-4 text-sm leading-6 text-[var(--muted)] lg:block">Write past one hundred if the day has more to say.</p>
             </section>
 
-            <section id="editor" className="flex min-h-[31rem] flex-col rounded-[1.6rem] border border-white/70 bg-white/65 p-4 shadow-[0_24px_80px_rgba(40,55,48,0.11)] backdrop-blur-sm sm:min-h-[37rem] sm:rounded-[2rem] sm:p-6 lg:min-h-0 lg:p-8">
+            <section ref={editorSectionRef} tabIndex={-1} id="editor" className="flex min-h-[31rem] flex-col rounded-[1.6rem] border border-white/70 bg-white/65 p-4 shadow-[0_24px_80px_rgba(40,55,48,0.11)] outline-none backdrop-blur-sm sm:min-h-[37rem] sm:rounded-[2rem] sm:p-6 lg:min-h-0 lg:p-8">
               {pastEntryUnavailable ? (
                 <div className="grid flex-1 place-items-center px-6 text-center">
                   <div><p className="font-serif text-3xl">This entry is not available offline.</p><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Reconnect before editing so an unseen cloud version is never replaced.</p><button type="button" onClick={() => void returnToToday()} className="mt-5 rounded-full bg-[var(--ink)] px-5 py-3 font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Return to today</button></div>
@@ -1077,7 +1171,7 @@ export function JournalEditor() {
       <ProductStoryPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
       {timezoneRequired && session && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard loading={habitLoading} onClose={() => setHabitOpen(false)} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} summary={habitSummary} />
+      <HabitDashboard loading={habitLoading} onClose={closeHabitDashboard} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} />
       {profile && session && (
         <AccountPanel key={profile.userId} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}

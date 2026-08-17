@@ -2,8 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import {
   buildCalendarGrid,
+  formatStreakLabel,
   missedDayMessage,
   parseHabitSummary,
+  shiftDate,
   shiftMonth,
 } from "../../lib/habit";
 import type { HabitSummary } from "../../types/habit";
@@ -53,6 +55,18 @@ test("handles leap-year and year-boundary month navigation", () => {
   expect(shiftMonth("2024-02-01", 1)).toBe("2024-03-01");
   const february = buildCalendarGrid(summary({ today: "2024-02-29", visibleMonth: "2024-02-01" }));
   expect(february.some((day) => day.date === "2024-02-29")).toBe(true);
+});
+
+test("shifts calendar dates across month, year, and leap-day boundaries", () => {
+  expect(shiftDate("2024-02-28", 1)).toBe("2024-02-29");
+  expect(shiftDate("2024-02-29", 1)).toBe("2024-03-01");
+  expect(shiftDate("2026-01-01", -1)).toBe("2025-12-31");
+});
+
+test("formats encouraging streak labels", () => {
+  expect(formatStreakLabel(0)).toBe("Your streak starts today");
+  expect(formatStreakLabel(1)).toBe("1-day streak");
+  expect(formatStreakLabel(12)).toBe("12-day streak");
 });
 
 test("uses supportive messages only at the selected thresholds", () => {

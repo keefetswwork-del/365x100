@@ -8,6 +8,9 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "What happened today?" }),
   ).toBeVisible();
+  const entryDate = page.getByLabel("Entry date", { exact: true });
+  await expect(entryDate.locator("time[datetime]")).toBeVisible();
+  await expect(entryDate.getByRole("button")).toHaveCount(0);
 
   const firstNinetyNineWords = Array.from(
     { length: 99 },

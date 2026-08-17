@@ -115,6 +115,16 @@ export function shiftMonth(month: string, offset: number): string {
   return `${shifted.getUTCFullYear().toString().padStart(4, "0")}-${(shifted.getUTCMonth() + 1).toString().padStart(2, "0")}-01`;
 }
 
+export function shiftDate(date: string, offset: number): string {
+  const { year, month, day } = parseDate(date);
+  const shifted = new Date(Date.UTC(year, month - 1, day + offset));
+  return `${shifted.getUTCFullYear().toString().padStart(4, "0")}-${(shifted.getUTCMonth() + 1).toString().padStart(2, "0")}-${shifted.getUTCDate().toString().padStart(2, "0")}`;
+}
+
+export function formatStreakLabel(streak: number): string {
+  return streak > 0 ? `${streak}-day streak` : "Your streak starts today";
+}
+
 export function formatMonth(month: string): string {
   const { year, month: monthNumber } = parseDate(month);
   return new Intl.DateTimeFormat("en", { month: "long", timeZone: "UTC", year: "numeric" })
