@@ -26,8 +26,12 @@ function localSupabaseEnvironment(): Record<string, string> {
 async function signInWithOtp(page: Page, request: APIRequestContext, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Email address").fill(email);
+  await expect(page.getByRole("button", { name: "Email me a six-digit code" })).toBeDisabled();
+  await page.getByLabel(/I accept the Privacy Policy/).check();
+  await page.getByLabel(/I accept the Terms of Use/).check();
   await page.getByRole("button", { name: "Email me a six-digit code" }).click();
   await expect(page.getByLabel(`Code sent to ${email}`)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Send another code in \d+s/ })).toBeDisabled();
 
   let code = "";
   await expect.poll(async () => {
@@ -109,6 +113,10 @@ test("configures return habits, persists prompts, and safely edits past entries"
     const users = await admin.auth.admin.listUsers();
     userId = users.data.users.find((user) => user.email === email)?.id ?? "";
     expect(userId).toBeTruthy();
+
+    const clearedAcceptance = await admin.from("legal_acceptances").delete().eq("user_id", userId);
+    expect(clearedAcceptance.error).toBeNull();
+
     const today = await page.locator("time[datetime]").getAttribute("datetime");
     expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const yesterday = offsetDate(today!, -1);
@@ -116,11 +124,28 @@ test("configures return habits, persists prompts, and safely edits past entries"
     const threeDaysAgo = offsetDate(today!, -3);
     const seededYesterday = ["Yesterday", "was", "complete.", ...Array.from({ length: 97 }, (_, index) => `detail${index + 1}`)].join(" ");
     const seededEarlier = ["An", "uncached", "earlier", "entry.", ...Array.from({ length: 96 }, (_, index) => `earlier${index + 1}`)].join(" ");
-    const inserted = await admin.from("entries").insert([
-      { content: seededYesterday, entry_date: yesterday, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
+    const insertedEarlier = await admin.from("entries").insert(
       { content: seededEarlier, entry_date: threeDaysAgo, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
-    ]);
-    expect(inserted.error).toBeNull();
+    );
+    expect(insertedEarlier.error).toBeNull();
+    const insertedYesterday = await admin.from("entries").insert(
+      { content: seededYesterday, entry_date: yesterday, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
+    );
+    expect(insertedYesterday.error).toBeNull();
+
+    await page.reload();
+    const consent = page.getByRole("dialog", { name: "Before cloud saving continues." });
+    await expect(consent).toBeVisible();
+    await expect(page.getByLabel("Your entry for today")).toHaveText("");
+    await expect(consent.getByRole("button", { name: "Accept and continue" })).toBeDisabled();
+    await consent.getByLabel(/I have read and accept the Privacy Policy/).check();
+    await consent.getByLabel(/I have read and accept the Terms of Use/).check();
+    await consent.getByRole("button", { name: "Accept and continue" }).click();
+    await expect(consent).toBeHidden();
+    await expect.poll(async () => {
+      const result = await admin.from("legal_acceptances").select("document_type").eq("user_id", userId);
+      return result.data?.length ?? 0;
+    }).toBe(2);
 
     await page.reload();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(refreshedPrompt ?? "");
@@ -165,6 +190,10 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await dateTrigger.click();
     const progress = page.getByRole("dialog", { name: "A record of showing up." });
     await expect(progress.getByText("2", { exact: true }).first()).toBeVisible();
+    await progress.getByRole("tab", { name: "Progress" }).click();
+    await expect(progress.getByRole("heading", { name: /Day \d+ of 365/ })).toBeVisible();
+    await expect(progress.getByText("Calendar year", { exact: true })).toBeVisible();
+    await progress.getByRole("tab", { name: "Calendar" }).click();
     const selectedToday = progress.getByRole("button", { name: `${today}: empty` });
     await expect(selectedToday).toHaveAttribute("aria-pressed", "true");
     await selectedToday.focus();

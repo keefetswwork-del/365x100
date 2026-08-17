@@ -21,5 +21,9 @@ If Custom Reports is unavailable in the current dashboard, run the private snipp
 | `founder_retention.sql` | `Founder - Retention` | Table or grouped chart |
 | `founder_book_progress.sql` | `Founder - Book Progress` | Table |
 | `founder_operational_health.sql` | `Founder - Operational Health` | Table or headline values |
+| `founder_writing_year_progress.sql` | `Founder - Writing Years` | Private table |
+| `founder_system_health.sql` | `Founder - System Health` | Table or grouped chart |
 
 The report is manually refreshed. It does not send email reports or alter application data.
+
+The system-health block contains only closed feature and error codes retained for 90 days. The writing-year block contains email-level aggregate progress for private founder use, but no journal content or internal identifiers.

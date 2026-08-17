@@ -15,9 +15,17 @@ import { BrandWordmark } from "@/components/brand-wordmark";
 import { ConflictPanel } from "@/components/conflict-panel";
 import { HabitDashboard } from "@/components/habit-dashboard";
 import { HabitOnboarding } from "@/components/habit-onboarding";
+import { LegalConsentPanel } from "@/components/legal-consent-panel";
 import { ProductStoryPanel } from "@/components/product-story-panel";
 import { RichJournalEditor } from "@/components/rich-journal-editor";
 import { TimezonePanel } from "@/components/timezone-panel";
+import {
+  acceptCurrentLegalDocuments,
+  clearPendingLegalConsent,
+  fetchLegalAcceptanceStatus,
+  hasPendingLegalConsent,
+  recordOperationalEvent,
+} from "@/lib/beta-operations";
 import {
   cacheFromCloudEntry,
   loadCloudCache,
@@ -76,11 +84,15 @@ import {
   getDateInTimeZone,
 } from "@/lib/timezone";
 import { countWords } from "@/lib/word-count";
+import { fetchWritingYearSummary } from "@/lib/writing-year";
 import {
   plainTextFromRichDocument,
   richDocumentsEqual,
   type RichEntryDocument,
 } from "@/lib/rich-text";
+import type {
+  WritingYearSummary,
+} from "@/types/beta";
 import type {
   CloudSaveStatus,
   MigrationConflict,
@@ -159,6 +171,7 @@ export function JournalEditor() {
   const [habitInitialView, setHabitInitialView] = useState<JournalLibraryView>("calendar");
   const [habitLoading, setHabitLoading] = useState(false);
   const [habitSummary, setHabitSummary] = useState<HabitSummary | null>(null);
+  const [writingYearSummary, setWritingYearSummary] = useState<WritingYearSummary | null>(null);
   const [todayDate, setTodayDate] = useState("");
   const [dailyPrompt, setDailyPrompt] = useState<DailyPrompt | null>(null);
   const [promptWorking, setPromptWorking] = useState(false);
@@ -167,6 +180,8 @@ export function JournalEditor() {
   const [welcomeBackVisible, setWelcomeBackVisible] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [online, setOnline] = useState(true);
+  const [legalAcceptanceRequired, setLegalAcceptanceRequired] = useState(false);
+  const [legalAcceptanceError, setLegalAcceptanceError] = useState("");
 
   const entryRef = useRef(entry);
   const richEntryRef = useRef<RichEntryDocument | null>(richEntry);
@@ -189,6 +204,7 @@ export function JournalEditor() {
   const editorSectionRef = useRef<HTMLElement>(null);
   const focusEditorAfterLoadRef = useRef(false);
   const pastEntryUnavailableRef = useRef(false);
+  const intentionalSignOutRef = useRef(false);
 
   const wordCount = countWords(entry);
   const progress = Math.min(wordCount, WORD_TARGET);
@@ -225,6 +241,12 @@ export function JournalEditor() {
       todayDateRef.current = summary.today;
       setTodayDate(summary.today);
       setHabitSummary(summary);
+      try {
+        setWritingYearSummary(await fetchWritingYearSummary(activeClient));
+      } catch {
+        setWritingYearSummary(null);
+        void recordOperationalEvent(activeClient, "writing-year", "writing-year-load-failed");
+      }
       if (summary.firstEntryDate && summary.firstEntryDate < summary.today) {
         void recordProductEvent(activeClient, "returned_next_day", summary.today);
       }
@@ -311,6 +333,7 @@ export function JournalEditor() {
         },
         onError() {
           setSaveStatus(navigator.onLine ? "error" : "offline");
+          void recordOperationalEvent(activeClient, "entry-save", "save-retry-exhausted");
         },
         onRetry() {
           setSaveStatus(navigator.onLine ? "retrying" : "offline");
@@ -427,6 +450,7 @@ export function JournalEditor() {
       });
       void loadPromptForDate(activeClient, entryDate);
     } catch {
+      void recordOperationalEvent(activeClient, "entry-load", "entry-load-failed");
       if (!cache && entryDate !== todayDateRef.current) {
         pastEntryUnavailableRef.current = true;
         setPastEntryUnavailable(true);
@@ -458,8 +482,15 @@ export function JournalEditor() {
     setTimezoneRequired(false);
     createSaveQueue(activeClient, activeSession.user.id);
 
-    const migrated = await migrateAnonymousEntries(activeClient, activeSession.user.id);
-    const dirty = await reconcileDirtyCaches(activeClient, activeSession.user.id);
+    let migrated: MigrationConflict[];
+    let dirty: MigrationConflict[];
+    try {
+      migrated = await migrateAnonymousEntries(activeClient, activeSession.user.id);
+      dirty = await reconcileDirtyCaches(activeClient, activeSession.user.id);
+    } catch (error) {
+      void recordOperationalEvent(activeClient, "migration", "migration-failed");
+      throw error;
+    }
     const nextConflicts = mergeConflicts(conflictsRef.current, [...migrated, ...dirty]);
     setConflictList(nextConflicts);
 
@@ -551,9 +582,18 @@ export function JournalEditor() {
       setAuthResolved(true);
     });
 
-    const { data: listener } = activeClient.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = activeClient.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) {
         return;
+      }
+      const previousSession = sessionRef.current;
+      if (event === "SIGNED_OUT" && previousSession && !intentionalSignOutRef.current) {
+        const currentDate = localDateRef.current;
+        if (currentDate) {
+          saveEntry(currentDate, entryRef.current);
+          saveRichEntry(currentDate, richEntryRef.current);
+        }
+        void recordOperationalEvent(activeClient, "auth", "session-expired");
       }
       sessionRef.current = nextSession;
       setSession(nextSession);
@@ -597,33 +637,59 @@ export function JournalEditor() {
         setProfile(null);
         setTimezoneRequired(false);
         setHabitSummary(null);
+        setWritingYearSummary(null);
         setHabitOpen(false);
         setDailyPrompt(null);
         setWelcomeBackVisible(false);
         setConflictList([]);
+        setLegalAcceptanceRequired(false);
+        setLegalAcceptanceError("");
         restoreAnonymousDate();
       });
       return;
     }
 
     let cancelled = false;
-    void fetchProfile(client)
-      .then(async (existingProfile) => {
-        if (cancelled) {
+    void (async () => {
+      try {
+        let legalStatus = await fetchLegalAcceptanceStatus(client);
+        if (!legalStatus.accepted && hasPendingLegalConsent()) {
+          legalStatus = await acceptCurrentLegalDocuments(client);
+          if (legalStatus.accepted) clearPendingLegalConsent();
+        }
+        if (cancelled) return;
+        if (!legalStatus.accepted) {
+          setLegalAcceptanceRequired(true);
+          setLegalAcceptanceError("");
+          setSaveStatus("saved-local");
           return;
         }
+        setLegalAcceptanceRequired(false);
+        setLegalAcceptanceError("");
+      } catch {
+        if (cancelled) return;
+        setLegalAcceptanceRequired(true);
+        setLegalAcceptanceError("Acceptance could not be checked. Your draft remains on this device; please try again.");
+        setSaveStatus(navigator.onLine ? "error" : "offline");
+        return;
+      }
+
+      try {
+        const existingProfile = await fetchProfile(client);
+        if (cancelled) return;
         if (!existingProfile) {
           setTimezoneRequired(true);
           setSaveStatus("saved-local");
           return;
         }
         await bootstrapCloudFromEffect(client, session, existingProfile);
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
+          void recordOperationalEvent(client, "profile", "profile-load-failed");
           setSaveStatus(navigator.onLine ? "error" : "offline");
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -841,6 +907,21 @@ export function JournalEditor() {
     await bootstrapCloud(client, session, savedProfile);
   }
 
+  async function completeLegalAcceptance() {
+    if (!client || !session) throw new Error("Authentication required");
+    try {
+      const status = await acceptCurrentLegalDocuments(client);
+      if (!status.accepted) throw new Error("Acceptance is incomplete");
+      clearPendingLegalConsent();
+      setLegalAcceptanceError("");
+      setLegalAcceptanceRequired(false);
+      setBootstrapRetry((value) => value + 1);
+    } catch {
+      setLegalAcceptanceError("Acceptance could not be recorded. Your writing is still safe on this device.");
+      throw new Error("Legal acceptance failed");
+    }
+  }
+
   function openAuthPanel() {
     markSignupStarted();
     void recordProductEvent(client, "signup_started", localDateRef.current);
@@ -904,36 +985,46 @@ export function JournalEditor() {
 
   async function exportEntries(entryDates?: string[]) {
     if (!client) throw new Error("Authentication required.");
-    await flushBeforeExport();
-    const entries = entryDates
-      ? await fetchCloudEntriesByDates(client, entryDates)
-      : await fetchAllCloudEntries(client);
-    if (entryDates && entries.length !== new Set(entryDates).size) {
-      throw new Error("Not every selected entry could be loaded.");
+    try {
+      await flushBeforeExport();
+      const entries = entryDates
+        ? await fetchCloudEntriesByDates(client, entryDates)
+        : await fetchAllCloudEntries(client);
+      if (entryDates && entries.length !== new Set(entryDates).size) {
+        throw new Error("Not every selected entry could be loaded.");
+      }
+      const today = todayDateRef.current || getLocalDateString();
+      downloadTextFile(
+        `365x100-journal-${today}.txt`,
+        serializePlainTextEntries(entries),
+        "text/plain",
+      );
+    } catch (error) {
+      void recordOperationalEvent(client, "export", "export-failed");
+      throw error;
     }
-    const today = todayDateRef.current || getLocalDateString();
-    downloadTextFile(
-      `365x100-journal-${today}.txt`,
-      serializePlainTextEntries(entries),
-      "text/plain",
-    );
   }
 
   async function downloadPortableData() {
     if (!client || !session || !profile) throw new Error("Authentication required.");
-    await flushBeforeExport();
-    const archive = await buildPortableArchive(client, {
-      email: session.user.email ?? "",
-      entries: await fetchAllCloudEntries(client),
-      preferences: preferencesFromProfile(profile),
-      profile,
-    });
-    const today = todayDateRef.current || getLocalDateString();
-    downloadTextFile(
-      `365x100-data-${today}.json`,
-      JSON.stringify(archive, null, 2),
-      "application/json",
-    );
+    try {
+      await flushBeforeExport();
+      const archive = await buildPortableArchive(client, {
+        email: session.user.email ?? "",
+        entries: await fetchAllCloudEntries(client),
+        preferences: preferencesFromProfile(profile),
+        profile,
+      });
+      const today = todayDateRef.current || getLocalDateString();
+      downloadTextFile(
+        `365x100-data-${today}.json`,
+        JSON.stringify(archive, null, 2),
+        "application/json",
+      );
+    } catch (error) {
+      void recordOperationalEvent(client, "export", "export-failed");
+      throw error;
+    }
   }
 
   useEffect(() => {
@@ -1005,9 +1096,14 @@ export function JournalEditor() {
       return;
     }
     persistCurrentImmediately();
-    await client.auth.signOut();
-    setAuthOpen(false);
-    setAccountOpen(false);
+    intentionalSignOutRef.current = true;
+    try {
+      await client.auth.signOut();
+      setAuthOpen(false);
+      setAccountOpen(false);
+    } finally {
+      intentionalSignOutRef.current = false;
+    }
   }
 
   async function updateTimezone(timezone: string) {
@@ -1034,7 +1130,12 @@ export function JournalEditor() {
 
     removeUserCloudCaches(session.user.id);
     queueRef.current?.stop();
-    await client.auth.signOut({ scope: "local" });
+    intentionalSignOutRef.current = true;
+    try {
+      await client.auth.signOut({ scope: "local" });
+    } finally {
+      intentionalSignOutRef.current = false;
+    }
     sessionRef.current = null;
     setSession(null);
     setAccountOpen(false);
@@ -1105,7 +1206,7 @@ export function JournalEditor() {
 
   const statusLabel: Record<CloudSaveStatus, string> = {
     conflict: "Review versions",
-    error: "Cloud save needs attention",
+    error: "Save failed — your latest draft remains on this device",
     offline: "Offline — saved on this device",
     restoring: "Restoring…",
     retrying: "Retrying cloud save…",
@@ -1138,9 +1239,12 @@ export function JournalEditor() {
       <main className={`journal-shell relative min-h-screen overflow-hidden px-4 py-5 sm:px-8 sm:py-8 lg:px-12 ${signedIn ? "pb-24 sm:pb-8" : ""}`}>
         <div className="relative mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-6xl flex-col sm:min-h-[calc(100vh-4rem)]">
           <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
-            <a href="#editor" className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--paper)]">
-              <BrandWordmark className="text-2xl" />
-            </a>
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <a href="#editor" className="shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--paper)]">
+                <BrandWordmark className="text-2xl" />
+              </a>
+              <span className="rounded-full border border-[var(--line)] px-2 py-1 text-[0.55rem] font-bold uppercase tracking-[0.12em] text-[var(--muted)] sm:text-[0.62rem]" aria-label="Private Beta">Private Beta</span>
+            </div>
             <div className="flex items-center gap-3 sm:gap-5">
               <button type="button" onClick={() => setAboutOpen(true)} className="rounded-full px-1 py-2 text-[0.65rem] font-bold text-[var(--muted)] outline-none hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:px-2 sm:text-xs"><span className="sm:hidden">About</span><span className="hidden sm:inline">About 365x100</span></button>
               <p className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)] sm:text-xs sm:tracking-[0.16em]">
@@ -1261,9 +1365,10 @@ export function JournalEditor() {
 
       <AuthPanel open={authOpen} onClose={() => setAuthOpen(false)} onAuthenticated={() => setAuthOpen(false)} />
       <ProductStoryPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
-      {timezoneRequired && session && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
-      {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} />
+      {session && <LegalConsentPanel errorMessage={legalAcceptanceError} open={legalAcceptanceRequired} onAccept={completeLegalAcceptance} onSignOut={signOut} />}
+      {timezoneRequired && session && !legalAcceptanceRequired && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
+      {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && !legalAcceptanceRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
+      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
       {profile && session && (
         <AccountPanel key={profile.userId} dataDownloadBlockedReason={exportBlockedReason} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onDownloadData={downloadPortableData} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}

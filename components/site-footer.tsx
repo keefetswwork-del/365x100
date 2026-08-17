@@ -15,6 +15,9 @@ export function SiteFooter() {
           <Link href="/terms" target="_blank" rel="noopener noreferrer" className={footerLinkClass}>
             Terms of Use{externalTabText}
           </Link>
+          <a href="mailto:hello@365x100.com?subject=365x100%20beta%20feedback" className={footerLinkClass}>
+            Feedback
+          </a>
           <a
             href="https://www.instagram.com/365x100daily/"
             target="_blank"

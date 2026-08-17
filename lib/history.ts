@@ -57,11 +57,11 @@ export async function fetchEntryHistory(
   beforeDate: string | null = null,
 ): Promise<HistoryPage> {
   const { data, error } = await client.rpc("get_entry_history", {
-    p_before_date: beforeDate,
-    p_from_date: filters.fromDate,
+    p_before_date: beforeDate ?? undefined,
+    p_from_date: filters.fromDate ?? undefined,
     p_limit: 30,
-    p_query: filters.query.trim() || null,
-    p_to_date: filters.toDate,
+    p_query: filters.query.trim() || undefined,
+    p_to_date: filters.toDate ?? undefined,
   });
 
   if (error || !data) {

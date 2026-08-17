@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { BrandWordmark } from "@/components/brand-wordmark";
+import { recordOperationalEvent } from "@/lib/beta-operations";
 import { getSupabaseClient } from "@/lib/supabase";
 
 export default function AuthCallbackPage() {
@@ -14,6 +15,7 @@ export default function AuthCallbackPage() {
     const code = new URLSearchParams(window.location.search).get("code");
 
     if (!client || !code) {
+      void recordOperationalEvent(client, "auth", "auth-callback-failed");
       queueMicrotask(() => {
         setMessage("This sign-in link is incomplete. Return to the writing page and try again.");
       });
@@ -22,6 +24,7 @@ export default function AuthCallbackPage() {
 
     void client.auth.exchangeCodeForSession(code).then(({ error }) => {
       if (error) {
+        void recordOperationalEvent(client, "auth", "auth-callback-failed");
         setMessage("Sign-in could not be completed. Return to the writing page and try again.");
         return;
       }

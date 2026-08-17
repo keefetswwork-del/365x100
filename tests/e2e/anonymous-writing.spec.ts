@@ -4,6 +4,7 @@ test("uses the canonical website wordmark", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveTitle("365x100 — Write today");
+  await expect(page.getByText("Private Beta", { exact: true })).toBeVisible();
 
   const homeLink = page.getByRole("link", { name: "365x100", exact: true });
   await expect(homeLink).toBeVisible();
@@ -83,6 +84,9 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
     .click();
   await expect(page.getByRole("dialog", { name: "Begin your year." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue with Google" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toBeDisabled();
+  await expect(page.getByLabel(/I accept the Privacy Policy/)).toBeVisible();
+  await expect(page.getByLabel(/I accept the Terms of Use/)).toBeVisible();
   await expect(editor).toHaveText(completedEntry);
 
   await page.setViewportSize({ width: 1280, height: 900 });

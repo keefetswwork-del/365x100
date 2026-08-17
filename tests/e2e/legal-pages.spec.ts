@@ -13,10 +13,12 @@ test("shows an accessible footer and opens legal pages in new tabs", async ({ pa
   const privacy = footer.getByRole("link", { name: "Privacy Policy (opens in a new tab)" });
   const terms = footer.getByRole("link", { name: "Terms of Use (opens in a new tab)" });
   const instagram = footer.getByRole("link", { name: "365x100daily on Instagram (opens in a new tab)" });
+  const feedback = footer.getByRole("link", { name: "Feedback" });
 
   await expect(privacy).toHaveAttribute("href", "/privacy");
   await expect(terms).toHaveAttribute("href", "/terms");
   await expect(instagram).toHaveAttribute("href", "https://www.instagram.com/365x100daily/");
+  await expect(feedback).toHaveAttribute("href", "mailto:hello@365x100.com?subject=365x100%20beta%20feedback");
   for (const link of [privacy, terms, instagram]) {
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", /noopener/);

@@ -6,8 +6,13 @@ const MAILPIT_URL = "http://127.0.0.1:54324";
 async function requestEmailCode(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Email address").fill(email);
+  await expect(page.getByRole("button", { name: "Email me a six-digit code" })).toBeDisabled();
+  await page.getByLabel(/I accept the Privacy Policy/).check();
+  await expect(page.getByRole("button", { name: "Email me a six-digit code" })).toBeDisabled();
+  await page.getByLabel(/I accept the Terms of Use/).check();
   await page.getByRole("button", { name: "Email me a six-digit code" }).click();
   await expect(page.getByLabel(`Code sent to ${email}`)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Send another code in \d+s/ })).toBeDisabled();
 }
 
 async function readLatestCode(request: APIRequestContext, email: string) {

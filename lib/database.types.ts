@@ -56,13 +56,15 @@ export type Database = {
           refreshed_at?: string | null
           user_id?: string
         }
-        Relationships: [{
-          foreignKeyName: "daily_prompt_assignments_prompt_id_fkey"
-          columns: ["prompt_id"]
-          isOneToOne: false
-          referencedRelation: "prompts"
-          referencedColumns: ["id"]
-        }]
+        Relationships: [
+          {
+            foreignKeyName: "daily_prompt_assignments_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_deliveries: {
         Row: {
@@ -127,6 +129,7 @@ export type Database = {
           user_id: string
           version: number
           word_count: number
+          writing_year_id: string
         }
         Insert: {
           completed_at?: string | null
@@ -139,6 +142,7 @@ export type Database = {
           user_id: string
           version?: number
           word_count?: number
+          writing_year_id: string
         }
         Update: {
           completed_at?: string | null
@@ -151,6 +155,98 @@ export type Database = {
           user_id?: string
           version?: number
           word_count?: number
+          writing_year_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entries_writing_year_id_fkey"
+            columns: ["writing_year_id"]
+            isOneToOne: false
+            referencedRelation: "writing_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_acceptances: {
+        Row: {
+          accepted_at: string
+          document_type: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          document_type: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          accepted_at?: string
+          document_type?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_acceptances_document_type_version_fkey"
+            columns: ["document_type", "version"]
+            isOneToOne: false
+            referencedRelation: "legal_document_versions"
+            referencedColumns: ["document_type", "version"]
+          },
+        ]
+      }
+      legal_document_versions: {
+        Row: {
+          created_at: string
+          document_type: string
+          effective_date: string
+          is_current: boolean
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          effective_date: string
+          is_current?: boolean
+          version: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          effective_date?: string
+          is_current?: boolean
+          version?: string
+        }
+        Relationships: []
+      }
+      operational_events: {
+        Row: {
+          dedupe_key: string
+          error_code: string
+          feature_area: string
+          id: number
+          occurred_at: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          dedupe_key: string
+          error_code: string
+          feature_area: string
+          id?: number
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          dedupe_key?: string
+          error_code?: string
+          feature_area?: string
+          id?: number
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -247,6 +343,33 @@ export type Database = {
         }
         Relationships: []
       }
+      writing_years: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          user_id: string
+          year_number: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date: string
+          user_id: string
+          year_number: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          user_id?: string
+          year_number?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       product_metrics_daily: {
@@ -260,6 +383,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_current_legal_documents: { Args: never; Returns: Json }
       claim_due_weekly_reviews: {
         Args: { p_limit?: number; p_now?: string }
         Returns: {
@@ -279,10 +403,19 @@ export type Database = {
           year_words: number
         }[]
       }
+      ensure_writing_year_for_date: {
+        Args: { p_entry_date: string; p_user_id: string }
+        Returns: string
+      }
       finish_weekly_review: {
-        Args: { p_delivery_id: string; p_error_code?: string; p_provider_id?: string }
+        Args: {
+          p_delivery_id: string
+          p_error_code?: string
+          p_provider_id?: string
+        }
         Returns: undefined
       }
+      get_current_legal_status: { Args: never; Returns: Json }
       get_daily_prompt: {
         Args: { p_entry_date: string; p_refresh?: boolean }
         Returns: {
@@ -301,23 +434,40 @@ export type Database = {
       }
       get_entry_history: {
         Args: {
-          p_before_date?: string | null
-          p_from_date?: string | null
+          p_before_date?: string
+          p_from_date?: string
           p_limit?: number
-          p_query?: string | null
-          p_to_date?: string | null
+          p_query?: string
+          p_to_date?: string
         }
         Returns: Json
       }
       get_habit_dashboard: { Args: { p_month?: string }; Returns: Json }
+      get_writing_year_dashboard: { Args: never; Returns: Json }
       habit_streaks: {
         Args: { p_today: string; p_user_id: string }
-        Returns: { current_streak: number; longest_streak: number }[]
+        Returns: {
+          current_streak: number
+          longest_streak: number
+        }[]
       }
+      is_valid_rich_entry: { Args: { value: Json }; Returns: boolean }
       is_valid_timezone: { Args: { value: string }; Returns: boolean }
       mark_welcome_back: { Args: { p_entry_date: string }; Returns: string }
+      record_operational_event: {
+        Args: {
+          p_error_code: string
+          p_feature_area: string
+          p_session_id?: string
+        }
+        Returns: boolean
+      }
       record_product_event: {
-        Args: { p_entry_date?: string; p_event_name: string; p_session_id?: string }
+        Args: {
+          p_entry_date?: string
+          p_event_name: string
+          p_session_id?: string
+        }
         Returns: boolean
       }
       save_entry: {

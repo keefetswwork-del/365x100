@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useState, type FormEvent } from "react";
 
+import {
+  markLegalConsentPending,
+  recordOperationalEvent,
+} from "@/lib/beta-operations";
 import { getSiteUrl, getSupabaseClient } from "@/lib/supabase";
 
 interface AuthPanelProps {
@@ -16,12 +21,24 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
   const [step, setStep] = useState<"email" | "code">("email");
   const [isWorking, setIsWorking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
 
   if (!open) {
     return null;
   }
 
   const client = getSupabaseClient();
+  const consentReady = privacyAccepted && termsAccepted;
 
   async function continueWithGoogle() {
     if (!client) {
@@ -31,11 +48,13 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
 
     setIsWorking(true);
     setErrorMessage("");
+    markLegalConsentPending();
     const { error } = await client.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${getSiteUrl()}/auth/callback` },
     });
     if (error) {
+      void recordOperationalEvent(client, "auth", "auth-callback-failed");
       setErrorMessage("Google sign-in could not start. Please try again.");
       setIsWorking(false);
     }
@@ -50,6 +69,7 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
 
     setIsWorking(true);
     setErrorMessage("");
+    markLegalConsentPending();
     const { error } = await client.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: true },
@@ -57,11 +77,32 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
     setIsWorking(false);
 
     if (error) {
+      void recordOperationalEvent(client, "auth", "otp-send-failed");
       setErrorMessage("The sign-in code could not be sent. Please check the email and try again.");
       return;
     }
 
     setStep("code");
+    setResendSeconds(60);
+  }
+
+  async function resendCode() {
+    if (!client || resendSeconds > 0) return;
+    setIsWorking(true);
+    setErrorMessage("");
+    markLegalConsentPending();
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    setIsWorking(false);
+    if (error) {
+      void recordOperationalEvent(client, "auth", "otp-send-failed");
+      setErrorMessage("A new code could not be sent yet. Please wait and try again.");
+      return;
+    }
+    setResendSeconds(60);
+    setErrorMessage("A new six-digit code has been sent.");
   }
 
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
@@ -80,6 +121,7 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
     setIsWorking(false);
 
     if (error) {
+      void recordOperationalEvent(client, "auth", "otp-verify-failed");
       setErrorMessage("That code is invalid or expired. Request a new one and try again.");
       return;
     }
@@ -117,9 +159,20 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
           Create an account without losing a word. Your browser draft stays in place until its cloud copy is confirmed.
         </p>
 
+        <div className="mt-5 space-y-3">
+          <label className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-white/55 p-3 text-sm font-bold">
+            <input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]" />
+            <span>I accept the <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="underline decoration-[var(--accent)] decoration-2 underline-offset-4">Privacy Policy<span className="sr-only"> (opens in a new tab)</span></Link>.</span>
+          </label>
+          <label className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-white/55 p-3 text-sm font-bold">
+            <input type="checkbox" checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]" />
+            <span>I accept the <Link href="/terms" target="_blank" rel="noopener noreferrer" className="underline decoration-[var(--accent)] decoration-2 underline-offset-4">Terms of Use<span className="sr-only"> (opens in a new tab)</span></Link>.</span>
+          </label>
+        </div>
+
         <button
           type="button"
-          disabled={isWorking}
+          disabled={isWorking || !consentReady}
           onClick={continueWithGoogle}
           className="mt-6 w-full rounded-full bg-[var(--ink)] px-5 py-3.5 font-bold text-white outline-none transition hover:bg-[var(--accent-dark)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 disabled:opacity-60"
         >
@@ -147,7 +200,7 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
             />
             <button
               type="submit"
-              disabled={isWorking}
+              disabled={isWorking || !consentReady}
               className="w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-60"
             >
               {isWorking ? "Sending code…" : "Email me a six-digit code"}
@@ -176,6 +229,14 @@ export function AuthPanel({ open, onAuthenticated, onClose }: AuthPanelProps) {
               className="w-full rounded-full bg-[var(--accent)] px-5 py-3 font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-dark)] focus-visible:ring-offset-4 disabled:opacity-60"
             >
               {isWorking ? "Checking…" : "Verify and save my writing"}
+            </button>
+            <button
+              type="button"
+              disabled={isWorking || resendSeconds > 0}
+              onClick={() => void resendCode()}
+              className="w-full rounded-full border border-[var(--line)] px-5 py-2 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"
+            >
+              {resendSeconds > 0 ? `Send another code in ${resendSeconds}s` : "Send another code"}
             </button>
             <button
               type="button"

@@ -4,6 +4,8 @@ import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "r
 
 import { buildCalendarGrid, formatMonth } from "@/lib/habit";
 import { mergeHistoryPages } from "@/lib/history";
+import { writingYearProgressPercent } from "@/lib/writing-year";
+import type { WritingYearSummary } from "@/types/beta";
 import type { HabitSummary } from "@/types/habit";
 import type { HistoryEntrySummary, HistoryFilters, HistoryPage, JournalLibraryView } from "@/types/history";
 
@@ -21,6 +23,7 @@ interface HabitDashboardProps {
   open: boolean;
   selectedDate: string;
   summary: HabitSummary | null;
+  writingYearSummary: WritingYearSummary | null;
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -62,6 +65,7 @@ export function HabitDashboard({
   open,
   selectedDate,
   summary,
+  writingYearSummary,
 }: HabitDashboardProps) {
   const [activeView, setActiveView] = useState<JournalLibraryView>(initialView);
   const [query, setQuery] = useState("");
@@ -206,7 +210,7 @@ export function HabitDashboard({
         {loading && activeView !== "history" && <p className="mt-8 text-sm font-semibold text-[var(--muted)]" role="status">Loading your progress…</p>}
         {!loading && !summary && activeView !== "history" && <p className="mt-8 rounded-2xl bg-white/55 p-5 text-sm text-[var(--muted)]" role="status">Progress is unavailable right now. Your editor and saved writing are still safe.</p>}
 
-        {summary && activeView === "progress" && <ProgressView summary={summary} />}
+        {summary && activeView === "progress" && <ProgressView summary={summary} writingYearSummary={writingYearSummary} />}
         {summary && activeView === "calendar" && (
           <CalendarView
             canMoveForward={canMoveForward}
@@ -269,13 +273,35 @@ export function HabitDashboard({
   );
 }
 
-function ProgressView({ summary }: { summary: HabitSummary }) {
+function formatWritingYearDate(date: string): string {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
+function ProgressView({ summary, writingYearSummary }: { summary: HabitSummary; writingYearSummary: WritingYearSummary | null }) {
   return <div role="tabpanel" className="mt-7">
+    <section className="mb-5 overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white/60 p-5 sm:p-6" aria-labelledby="writing-year-title">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">Your personal writing year</p>
+      {!writingYearSummary && <p className="mt-3 text-sm text-[var(--muted)]">Writing-year progress is unavailable right now. Your saved entries are unaffected.</p>}
+      {writingYearSummary && !writingYearSummary.hasWritingYear && <div className="mt-3"><h3 id="writing-year-title" className="font-serif text-3xl tracking-[-0.03em]">Your year begins with your first saved entry.</h3><p className="mt-2 text-sm leading-6 text-[var(--muted)]">That date becomes Day 1 and stays fixed, even when you miss a day.</p></div>}
+      {writingYearSummary?.hasWritingYear && <div className="mt-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div><h3 id="writing-year-title" className="font-serif text-4xl tracking-[-0.04em]">Day {writingYearSummary.dayNumber} of 365</h3><p className="mt-2 text-sm font-semibold text-[var(--muted)]">Writing year {writingYearSummary.yearNumber} · {formatWritingYearDate(writingYearSummary.startDate)} to {formatWritingYearDate(writingYearSummary.endDate)}</p></div>
+          <div className="text-left sm:text-right"><p className="font-serif text-3xl">{writingYearSummary.completedDays}</p><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">completed writing days</p></div>
+        </div>
+        <progress className="writing-progress mt-5 block" max={100} value={writingYearProgressPercent(writingYearSummary.dayNumber)} aria-label={`Day ${writingYearSummary.dayNumber} of 365`} />
+        <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Missed days do not move this date range. Every saved page remains part of your journal.</p>
+      </div>}
+    </section>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <article className="rounded-2xl bg-[var(--ink)] p-4 text-white"><p className="text-xs font-bold uppercase tracking-wider text-white/65">Current</p><p className="mt-1 font-serif text-3xl">{summary.currentStreak}</p><p className="text-sm text-white/75">day streak</p></article>
       <article className="rounded-2xl border border-[var(--line)] bg-white/55 p-4"><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Longest</p><p className="mt-1 font-serif text-3xl">{summary.longestStreak}</p><p className="text-sm text-[var(--muted)]">days</p></article>
       <article className="rounded-2xl border border-[var(--line)] bg-white/55 p-4"><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">This month</p><p className="mt-1 font-serif text-3xl">{summary.monthCompletedDays}</p><p className="text-sm text-[var(--muted)]">days · {summary.monthWords} words</p></article>
-      <article className="rounded-2xl border border-[var(--line)] bg-white/55 p-4"><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">This year</p><p className="mt-1 font-serif text-3xl">{summary.yearCompletedDays}</p><p className="text-sm text-[var(--muted)]">days · {summary.yearWords} words</p></article>
+      <article className="rounded-2xl border border-[var(--line)] bg-white/55 p-4"><p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Calendar year</p><p className="mt-1 font-serif text-3xl">{summary.yearCompletedDays}</p><p className="text-sm text-[var(--muted)]">days · {summary.yearWords} words</p></article>
     </div>
     <section className="mt-5 overflow-hidden rounded-[1.5rem] bg-[var(--ink)] p-5 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-6">
       <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent)]">Your book in progress</p><h3 className="mt-2 font-serif text-3xl tracking-[-0.03em]">These pages are becoming your year.</h3><p className="mt-2 max-w-xl text-sm leading-6 text-white/65">You have written {summary.yearWords.toLocaleString()} words across {summary.yearCompletedDays} completed days this year.</p></div>

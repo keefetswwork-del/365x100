@@ -147,6 +147,12 @@ export function AccountPanel({
           {dataDownloadBlockedReason && <p className="mt-2 text-xs font-semibold text-[var(--muted)]">{dataDownloadBlockedReason}</p>}
         </section>
 
+        <section className="mt-5 rounded-2xl border border-[var(--line)] bg-white/55 p-5">
+          <h3 className="font-serif text-2xl">Private beta feedback</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Tell us what worked or report a problem. Your journal text is never attached automatically.</p>
+          <a href="mailto:hello@365x100.com?subject=365x100%20beta%20feedback" className="mt-4 inline-flex min-h-11 items-center rounded-full border border-[var(--ink)] px-5 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Email feedback or a bug report</a>
+        </section>
+
         <button type="button" disabled={isWorking} onClick={() => void onSignOut()} className="mt-6 w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-60">Sign out</button>
 
         <section className="mt-8 border-t border-red-900/15 pt-6">
