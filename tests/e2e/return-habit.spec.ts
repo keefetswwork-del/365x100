@@ -127,6 +127,16 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await expect(page.getByText("1-day streak", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "1-day streak" })).toHaveCount(0);
 
+    const mobileViewport = page.viewportSize();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const todayEditorWidth = await page.locator("#editor").evaluate((element) => element.getBoundingClientRect().width);
+    await page.getByRole("button", { name: "Previous day" }).click();
+    await expect(page.getByText("Past entry", { exact: true })).toBeVisible();
+    const pastEditorWidth = await page.locator("#editor").evaluate((element) => element.getBoundingClientRect().width);
+    expect(Math.abs(pastEditorWidth - todayEditorWidth)).toBeLessThanOrEqual(1);
+    await page.getByRole("button", { name: "Next day" }).click();
+    if (mobileViewport) await page.setViewportSize(mobileViewport);
+
     await page.getByLabel("Writing navigation").getByRole("button", { name: "Library" }).click();
     let library = page.getByRole("dialog", { name: "A record of showing up." });
     await expect(library.getByRole("tab", { name: "History" })).toHaveAttribute("aria-selected", "true");

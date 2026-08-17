@@ -67,6 +67,39 @@ test("formats and restores an anonymous entry without changing its word count", 
   await expect(about).toBeHidden();
 });
 
+test("keeps the editor wide for long prompts and responsive at smaller widths", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const editorSection = page.locator("#editor");
+  const editor = page.getByLabel("Your entry for today");
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(editor).toBeEnabled();
+
+  const initialWidth = await editorSection.evaluate((element) => element.getBoundingClientRect().width);
+  await heading.evaluate((element) => {
+    element.textContent = "What recent conversation deserves a place in your year?";
+  });
+  const longPromptWidth = await editorSection.evaluate((element) => element.getBoundingClientRect().width);
+  const editorWidth = await editor.evaluate((element) => element.getBoundingClientRect().width);
+
+  expect(initialWidth).toBeGreaterThan(650);
+  expect(Math.abs(longPromptWidth - initialWidth)).toBeLessThanOrEqual(1);
+  expect(editorWidth).toBeGreaterThan(longPromptWidth - 80);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+
+  for (const viewport of [
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const responsiveWidth = await editorSection.evaluate((element) => element.getBoundingClientRect().width);
+    expect(responsiveWidth).toBeLessThanOrEqual(viewport.width);
+    expect(responsiveWidth).toBeGreaterThan(viewport.width - 80);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+  }
+});
+
 test("preserves one selection through every inline, typography, palette, and alignment control", async ({ page }) => {
   const editor = await openDesktopEditor(page);
   await editor.fill("alpha beta gamma");

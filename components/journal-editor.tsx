@@ -1188,10 +1188,10 @@ export function JournalEditor() {
             )}
           </section>
 
-          <div className="grid flex-1 gap-7 py-7 md:gap-10 md:py-10 lg:grid-cols-[0.38fr_0.62fr] lg:gap-16 lg:py-12">
-            <section className="flex flex-col justify-between gap-6 lg:py-3">
+          <div className="grid flex-1 gap-7 py-7 md:gap-10 md:py-10 lg:grid-cols-[minmax(0,0.38fr)_minmax(0,0.62fr)] lg:gap-16 lg:py-12">
+            <section className="min-w-0 flex flex-col justify-between gap-6 lg:py-3">
               <div>
-                <h1 className="max-w-xl font-serif text-[clamp(2.7rem,8vw,5.5rem)] leading-[0.91] font-medium tracking-[-0.055em] text-[var(--ink)]">{promptHeading}</h1>
+                <h1 className="max-w-xl break-words font-serif text-[clamp(2.7rem,8vw,5.5rem)] leading-[0.91] font-medium tracking-[-0.055em] text-balance text-[var(--ink)] lg:max-w-full lg:text-[4.25rem]">{promptHeading}</h1>
                 {dailyPrompt && isToday && profile?.dailyPromptsEnabled && (
                   <button type="button" disabled={promptWorking} onClick={() => void refreshPrompt()} className="mt-4 rounded-full border border-[var(--line)] bg-white/40 px-4 py-2 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">{promptWorking ? "Finding another…" : "Try another prompt"}</button>
                 )}
@@ -1204,7 +1204,7 @@ export function JournalEditor() {
               <p className="hidden max-w-xs border-l-2 border-[var(--sage)] pl-4 text-sm leading-6 text-[var(--muted)] lg:block">Write past one hundred if the day has more to say.</p>
             </section>
 
-            <section ref={editorSectionRef} tabIndex={-1} id="editor" className="flex min-h-[31rem] flex-col rounded-[1.6rem] border border-white/70 bg-white/65 p-4 shadow-[0_24px_80px_rgba(40,55,48,0.11)] outline-none backdrop-blur-sm sm:min-h-[37rem] sm:rounded-[2rem] sm:p-6 lg:min-h-0 lg:p-8">
+            <section ref={editorSectionRef} tabIndex={-1} id="editor" className="flex min-h-[31rem] min-w-0 w-full flex-col rounded-[1.6rem] border border-white/70 bg-white/65 p-4 shadow-[0_24px_80px_rgba(40,55,48,0.11)] outline-none backdrop-blur-sm sm:min-h-[37rem] sm:rounded-[2rem] sm:p-6 lg:min-h-0 lg:p-8">
               {pastEntryUnavailable ? (
                 <div className="grid flex-1 place-items-center px-6 text-center">
                   <div><p className="font-serif text-3xl">This entry is not available offline.</p><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Reconnect before editing so an unseen cloud version is never replaced.</p><button type="button" onClick={() => void returnToToday()} className="mt-5 rounded-full bg-[var(--ink)] px-5 py-3 font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Return to today</button></div>
