@@ -39,7 +39,7 @@ test("accepts the supported versioned editor shape", () => {
 
 test("keeps only curated inline styles", () => {
   expect(sanitizeRichStyle("color: #18332e; position: fixed; font-size: 99px; background-color: #fde1d8")).toBe(
-    "color: #18332e; background-color: #fde1d8",
+    "color: #18332e;background-color: #fde1d8;",
   );
 });
 

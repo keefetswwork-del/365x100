@@ -1,3 +1,6 @@
+import { getCSSFromStyleObject } from "@lexical/selection";
+import { getStyleObjectFromCSS } from "lexical";
+
 import type { Json } from "@/lib/database.types";
 
 export const RICH_ENTRY_SCHEMA_VERSION = 1 as const;
@@ -45,19 +48,12 @@ function isSupportedNodeTree(value: unknown): boolean {
 }
 
 export function sanitizeRichStyle(style: string): string {
-  return style
-    .split(";")
-    .map((declaration) => declaration.trim())
-    .filter(Boolean)
-    .map((declaration) => {
-      const separator = declaration.indexOf(":");
-      if (separator < 0) return "";
-      const property = declaration.slice(0, separator).trim().toLowerCase();
-      const value = declaration.slice(separator + 1).trim();
-      return ALLOWED_STYLES[property]?.has(value) ? `${property}: ${value}` : "";
-    })
-    .filter(Boolean)
-    .join("; ");
+  const safeStyles = Object.fromEntries(
+    Object.entries(getStyleObjectFromCSS(style)).filter(
+      ([property, value]) => ALLOWED_STYLES[property]?.has(value),
+    ),
+  );
+  return getCSSFromStyleObject(safeStyles);
 }
 
 export function isSafeLink(value: string): boolean {

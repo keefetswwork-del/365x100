@@ -173,6 +173,10 @@ textarea {
   box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
 }
 
+.toolbar-swatch-active {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
+}
+
 .writing-progress {
   appearance: none;
   background: rgba(24, 51, 46, 0.1);
