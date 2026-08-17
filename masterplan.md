@@ -27,7 +27,7 @@ At 100 words, show:
 Save your entry and begin your year.
 User continues with Google or passwordless email.
 The existing entry transfers into their account.
-User selects a daily reminder time.
+User selects a weekly review time.
 User enters the signed-in home screen.
 
 First-time-flow success criteria
@@ -377,7 +377,7 @@ Only after people return:
 
 Free users access their latest 30 days.
 Older writing remains securely stored but locked.
-Premium costs US$5/month or US$29/year.
+Premium costs S$5/month or S$29/year.
 Upgrade prompt appears after seven completed days.
 Stripe Checkout handles payment.
 Cancellation does not delete writing.
@@ -487,3 +487,190 @@ Every selected entry appears once in chronological export order.
 The complete data download includes every owned entry and the user's preferences.
 Pending edits are included before export or export is safely blocked.
 Mobile and desktop library navigation remain accessible and do not duplicate Calendar.
+
+---
+
+# Addendum: Build 3.3 — Writing-Year Foundations and Beta Operations
+
+## Purpose
+
+Make daily writing dependable, establish each user’s personal 365-day writing year, and provide the controls needed to operate the private beta safely.
+
+This build does not add daily reminder emails. Weekly writing reviews remain optional.
+
+## 1. Daily-entry reliability
+
+- Show a clear saving state:
+  - Saving…
+  - Saved
+  - Save failed
+- Autosave drafts while the user writes.
+- Recover unsaved local drafts after refresh, browser closure or temporary connection loss.
+- Maintain one entry per user’s local calendar day.
+- Use the user’s saved timezone to determine the current writing date.
+- Handle midnight and timezone changes without duplicating, overwriting or assigning entries to the wrong day.
+- Mark a day as completed once the entry reaches at least 100 words.
+- Allow users to continue writing beyond 100 words.
+- Allow previous entries to be edited.
+- Recalculate completion status when an existing entry is edited.
+- Preserve rich-text formatting during saves, synchronisation and later editing.
+- Reconcile local and cloud changes safely after a user reconnects.
+- Provide working authentication recovery and passwordless sign-in flows.
+
+## 2. Personal writing-year system
+
+- Create the user’s first writing year when their first authenticated entry is saved.
+- Set the first saved entry’s local date as Day 1.
+- Set Day 365 to 364 calendar days after Day 1.
+- Store writing-year boundaries independently from streaks and completed-entry counts.
+- Do not move the writing-year dates when the user misses a day.
+- Display the user’s current progress as:
+  - Day X of 365
+  - Number of completed writing days
+  - Writing-year start and end dates
+- Assign every entry to the correct writing year.
+- Allow the first writing year to contain fewer than 365 completed entries.
+- Begin a new writing year automatically after the previous 365-day period ends.
+- Preserve previous writing years for later viewing and book generation.
+
+## 3. Private-beta controls
+
+- Display a discreet Private Beta label.
+- Publish links to the Privacy Policy and Terms of Use.
+- Record acceptance of the current Privacy Policy and Terms versions during registration.
+- Provide an accessible feedback and bug-reporting method.
+- Protect administrative functions from ordinary users.
+- Provide an internal admin view showing only the information required to operate the beta, including:
+  - User count
+  - Account creation date
+  - Last active date
+  - Completed-entry count
+  - Current writing-year progress
+  - Relevant system errors
+- Do not expose journal contents in aggregate analytics or ordinary admin reporting.
+- Keep user data export and account deletion available.
+- Provide privacy-respecting product events for:
+  - Entry started
+  - Entry completed
+  - Account created
+  - Returning writer
+  - Monthly chapter eligibility
+- Add basic rate limiting, error monitoring and database backup procedures.
+
+## Build 3.3 success conditions
+
+Build 3.3 is complete when:
+
+- A user can write, refresh the page and recover their latest draft without losing content.
+- The interface accurately reports whether an entry is saving, saved or failed.
+- A temporary connection loss does not silently overwrite a newer local or cloud entry.
+- Rich text survives saving, signing out, signing in and opening the entry on another device.
+- Each user can have only one entry for a given local calendar date.
+- Entries created around midnight are assigned to the correct date in the user’s timezone.
+- Reaching 100 words marks the day as completed.
+- Editing an entry below 100 words recalculates its completion status consistently.
+- The first authenticated entry permanently establishes Day 1 of the user’s writing year.
+- Missing days do not postpone the writing-year end date.
+- Day X of 365 is calculated correctly throughout the writing year.
+- Entries are assigned to the correct writing year at its start and end boundaries.
+- A second writing year begins correctly after Day 365.
+- Privacy Policy and Terms links are visible and acceptance is recorded.
+- A beta user can submit feedback, export their data and delete their account.
+- Ordinary users cannot access beta-administration functions.
+- Product analytics contain event metadata but never journal text.
+- The complete automated test suite and production smoke test pass.
+
+---
+
+# Addendum: Build 3.4 — Monthly Chapters and Annual Digital Books
+
+## Purpose
+
+Turn daily entries into the core 365x100 outcome: monthly chapters that help users revisit their writing and an annual digital book based on each user’s personal 365-day writing year.
+
+Build 3.4 covers digital generation only. Printed-book ordering, payments, AI summaries and media uploads are excluded.
+
+## 1. Monthly chapter system
+
+- Treat each calendar month as a potential monthly chapter.
+- Count completed daily entries within that calendar month.
+- Require at least 10 completed daily entries for a monthly chapter to be created.
+- Do not count entries below 100 words toward monthly eligibility.
+- Show progress toward eligibility during the month, such as:
+  - 7 of 10 completed days
+  - 3 more completed days needed
+- Evaluate eligibility after the calendar month ends.
+- Compile eligible entries in chronological order.
+- Include:
+  - Month and year
+  - Entry date
+  - Entry title, when available
+  - Rich-text entry content
+  - Number of completed writing days
+- Provide an in-app monthly chapter view.
+- Allow eligible monthly chapters to be exported in a portable digital format.
+- Clearly explain why a chapter was not created when the user completed fewer than 10 days.
+- Recalculate chapter eligibility when a past entry is edited.
+- Regenerate an existing chapter when its source entries change.
+- Keep monthly chapters aligned to calendar months even when a writing year begins partway through a month.
+- Assign each chapter or relevant portion to the correct personal writing year.
+
+## 2. Annual digital-book system
+
+- Make each annual book cover exactly one personal writing year:
+  - Day 1 is the date of the user’s first saved authenticated entry for that writing year.
+  - Day 365 is 364 calendar days later.
+- Generate the annual book only after Day 365 has ended.
+- Compile entries chronologically within the writing-year boundaries.
+- Organise the book into calendar-month sections.
+- Handle partial first and final calendar months correctly.
+- Include:
+  - A cover page
+  - Writing-year date range
+  - Table of contents
+  - Monthly sections
+  - Entry dates
+  - Entry titles, when available
+  - Rich-text entry content
+  - End-of-year writing statistics
+- Preserve the user’s writing rather than rewriting or summarising it.
+- Do not use AI-generated summaries in this build.
+- Represent missed days through writing statistics or date gaps rather than blank pages.
+- Provide an in-app book preview.
+- Allow the annual book to be exported as a readable PDF.
+- Regenerate the book when an included entry is edited.
+- Preserve completed annual books and allow users to revisit previous writing years.
+- Keep book generation separate from future printed-book purchasing.
+
+## Build 3.4 success conditions
+
+Build 3.4 is complete when:
+
+- A calendar month with nine or fewer completed entries does not produce a monthly chapter.
+- A calendar month with at least 10 completed entries produces a monthly chapter after the month ends.
+- The eligibility counter includes only entries containing at least 100 words.
+- Monthly chapters contain the correct entries in chronological order.
+- Months containing the beginning or end of a writing year are handled correctly.
+- Users can see why an ineligible month did not generate a chapter.
+- Editing a past entry correctly updates eligibility and regenerates the affected chapter.
+- Monthly chapter formatting preserves dates, titles and supported rich text.
+- An annual book becomes available only after the user’s personal Day 365 has ended.
+- The annual book contains only entries within the correct 365-day writing year.
+- Partial first and final months appear correctly.
+- Missed days do not create unnecessary blank pages.
+- The preview and exported PDF contain the same entries in the same order.
+- Long entries, page breaks and rich-text formatting render correctly in the PDF.
+- Editing an included entry causes the annual book to regenerate correctly.
+- Previous annual books remain accessible after a new writing year begins.
+- No private journal content is exposed to another user during chapter or book generation.
+- Monthly chapter and annual-book generation pass automated tests and production acceptance testing.
+
+## Explicitly excluded from Builds 3.3 and 3.4
+
+- Daily reminder emails
+- Paid subscriptions and Stripe
+- Premium history restrictions
+- Printed-book ordering
+- AI-written summaries
+- Photo, audio or video uploads
+- Social sharing of private journal content
