@@ -58,13 +58,6 @@ textarea {
 }
 
 .rich-editor-content {
-  background-image: linear-gradient(
-    to bottom,
-    transparent calc(2rem - 1px),
-    rgba(24, 51, 46, 0.08) calc(2rem - 1px),
-    rgba(24, 51, 46, 0.08) 2rem
-  );
-  background-size: 100% 2rem;
   line-height: 2rem;
 }
 
