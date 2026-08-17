@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { League_Spartan, Manrope, Newsreader } from "next/font/google";
+
+import { SiteFooter } from "@/components/site-footer";
+
 import "./globals.css";
 
 const manrope = Manrope({
@@ -29,7 +32,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${manrope.variable} ${newsreader.variable} ${leagueSpartan.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }
