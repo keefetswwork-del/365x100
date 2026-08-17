@@ -39,6 +39,39 @@ export function ProductStoryPanel({ onClose, open }: ProductStoryPanelProps) {
           <article className="rounded-2xl bg-[var(--sage)]/25 p-5"><div className="flex items-start justify-between gap-2"><p className="font-serif text-3xl text-[var(--accent)]">30</p><span className="rounded-full border border-[var(--line)] px-2 py-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">In development</span></div><h3 className="mt-3 font-bold">Gather a month</h3><p className="mt-2 text-sm leading-6 text-[var(--muted)]">Daily pages become a monthly digital storybook of moments, turning points, and people worth remembering.</p></article>
           <article className="rounded-2xl bg-[var(--ink)] p-5 text-white"><div className="flex items-start justify-between gap-2"><p className="font-serif text-3xl text-[var(--accent)]">365</p><span className="rounded-full border border-white/20 px-2 py-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-white/65">In development</span></div><h3 className="mt-3 font-bold">Hold a year</h3><p className="mt-2 text-sm leading-6 text-white/70">The vision is an annual digital book, with an optional hardcopy you can keep or share.</p></article>
         </div>
+
+        <section aria-labelledby="how-it-works-title" className="mt-10 border-t border-[var(--line)] pt-8">
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-[var(--accent-dark)]">How it works</p>
+          <h3 id="how-it-works-title" className="mt-2 font-serif text-3xl tracking-[-0.03em]">Start with today.</h3>
+          <div className="mt-4 space-y-4 text-sm leading-7 text-[var(--muted)] sm:text-base">
+            <p>Write about what happened, what mattered, or whatever is on your mind. Your draft saves as you write. Reach 100 words to complete the day - or keep going if you have more to say.</p>
+            <p>Come back tomorrow and write another page. Over time, those ordinary pages become a record of your month and, eventually, the story of your year.</p>
+          </div>
+        </section>
+
+        <section aria-labelledby="about-books-title" className="mt-10 border-t border-[var(--line)] pt-8">
+          <p className="text-xs font-bold uppercase tracking-[0.17em] text-[var(--accent-dark)]">About your books</p>
+          <h3 id="about-books-title" className="sr-only">Planned monthly and annual books</h3>
+          <div className="mt-5 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+            <article className="grid gap-3 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6">
+              <div>
+                <h4 className="font-bold">Monthly</h4>
+                <p className="mt-2 inline-flex rounded-full border border-[var(--line)] px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Target: end Q2 2027</p>
+              </div>
+              <div className="space-y-3 text-sm leading-7 text-[var(--muted)] sm:text-base">
+                <p>Monthly digital chapters are in development. At the end of each calendar month, a chapter will be created when you have completed at least 10 daily entries of 100 words or more.</p>
+                <p>Months with fewer than 10 completed entries remain in your journal but do not generate a monthly chapter.</p>
+              </div>
+            </article>
+            <article className="grid gap-3 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6">
+              <div>
+                <h4 className="font-bold">Annual</h4>
+                <p className="mt-2 inline-flex rounded-full border border-[var(--line)] px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Target: end Q4 2027</p>
+              </div>
+              <p className="text-sm leading-7 text-[var(--muted)] sm:text-base">Your annual book will follow your personal writing year: 365 days beginning with your first saved entry, rather than January to December.</p>
+            </article>
+          </div>
+        </section>
       </section>
     </div>
   );

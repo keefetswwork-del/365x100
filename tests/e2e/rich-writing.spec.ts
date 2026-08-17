@@ -40,10 +40,24 @@ test("formats and restores an anonymous entry without changing its word count", 
     name: "Write at least 100 words every day and preserve the story of your year.",
   });
   await expect(about).toContainText("365 days. 100 words a day. Your year in writing.");
-  await expect(about).toContainText("No fixed agenda. Write about anything");
-  await expect(about).toContainText("monthly digital storybook");
+  await expect(about.getByRole("heading", { name: "Write today" })).toBeVisible();
+  await expect(about.getByText("No fixed agenda. Write about anything, reach 100 words, or keep going when the day has more to say.", { exact: true })).toBeVisible();
+  await expect(about.getByRole("heading", { name: "Gather a month" })).toBeVisible();
+  await expect(about.getByText("Daily pages become a monthly digital storybook of moments, turning points, and people worth remembering.", { exact: true })).toBeVisible();
+  await expect(about.getByRole("heading", { name: "Hold a year" })).toBeVisible();
+  await expect(about.getByText("The vision is an annual digital book, with an optional hardcopy you can keep or share.", { exact: true })).toBeVisible();
   await expect(about.getByText("In development", { exact: true })).toHaveCount(2);
   await expect(about.getByText("Coming later", { exact: true })).toHaveCount(0);
+  await expect(about.getByText("How it works", { exact: true })).toBeVisible();
+  await expect(about.getByRole("heading", { name: "Start with today." })).toBeVisible();
+  await expect(about).toContainText("Your draft saves as you write.");
+  await expect(about).toContainText("Come back tomorrow and write another page.");
+  await expect(about.getByText("About your books", { exact: true })).toBeVisible();
+  await expect(about).toContainText("at least 10 daily entries of 100 words or more");
+  await expect(about).toContainText("do not generate a monthly chapter");
+  await expect(about).toContainText("365 days beginning with your first saved entry");
+  await expect(about.getByText("Target: end Q2 2027", { exact: true })).toBeVisible();
+  await expect(about.getByText("Target: end Q4 2027", { exact: true })).toBeVisible();
   await expect(about.getByRole("button", { name: "Close" })).toBeFocused();
 
   await page.keyboard.press("Escape");
