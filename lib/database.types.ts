@@ -299,6 +299,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_entry_history: {
+        Args: {
+          p_before_date?: string | null
+          p_from_date?: string | null
+          p_limit?: number
+          p_query?: string | null
+          p_to_date?: string | null
+        }
+        Returns: Json
+      }
       get_habit_dashboard: { Args: { p_month?: string }; Returns: Json }
       habit_streaks: {
         Args: { p_today: string; p_user_id: string }

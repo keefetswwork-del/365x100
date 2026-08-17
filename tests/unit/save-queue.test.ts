@@ -167,3 +167,58 @@ test("keeps the latest pending content for every date", async () => {
   ]);
   queue.stop();
 });
+
+test("waits for coalesced saves on every date before reporting idle", async () => {
+  let releaseFirst: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const saved: string[] = [];
+  const queue = new CloudSaveQueue(
+    async (pending) => {
+      if (saved.length === 0) await gate;
+      saved.push(`${pending.entryDate}:${pending.content}`);
+      return { status: "saved", entry: savedEntry(pending, pending.expectedVersion + 1) };
+    },
+    {
+      onConflict: () => undefined,
+      onError: () => undefined,
+      onRetry: () => undefined,
+      onSaved: () => undefined,
+      onSaving: () => undefined,
+    },
+    1,
+  );
+
+  queue.enqueue(datedInput("2026-08-16", "first"));
+  queue.enqueue(datedInput("2026-08-17", "today old"));
+  queue.enqueue(datedInput("2026-08-17", "today latest"));
+  let idle = false;
+  const wait = queue.whenIdle().then(() => { idle = true; });
+  await expect.poll(() => idle).toBe(false);
+  releaseFirst?.();
+  await wait;
+
+  expect(saved).toEqual([
+    "2026-08-16:first",
+    "2026-08-17:today latest",
+  ]);
+  queue.stop();
+});
+
+test("blocks an idle waiter when a save needs conflict review", async () => {
+  const pending = input("local draft");
+  const queue = new CloudSaveQueue(
+    async () => ({ status: "conflict", remote: savedEntry(input("remote"), 4) }),
+    {
+      onConflict: () => undefined,
+      onError: () => undefined,
+      onRetry: () => undefined,
+      onSaved: () => undefined,
+      onSaving: () => undefined,
+    },
+    1,
+  );
+
+  queue.enqueue(pending);
+  await expect(queue.whenIdle()).rejects.toThrow("conflict review");
+  queue.stop();
+});

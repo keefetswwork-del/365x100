@@ -6,24 +6,28 @@ import { getSupportedTimeZones, isValidTimeZone } from "@/lib/timezone";
 import type { HabitPreferences } from "@/types/habit";
 
 interface AccountPanelProps {
+  dataDownloadBlockedReason: string | null;
   email: string;
   habitPreferences: HabitPreferences;
   open: boolean;
   timezone: string;
   onClose: () => void;
   onDelete: () => Promise<void>;
+  onDownloadData: () => Promise<void>;
   onSaveTimezone: (timezone: string) => Promise<void>;
   onSaveHabitPreferences: (preferences: HabitPreferences) => Promise<void>;
   onSignOut: () => Promise<void>;
 }
 
 export function AccountPanel({
+  dataDownloadBlockedReason,
   email,
   habitPreferences,
   open,
   timezone,
   onClose,
   onDelete,
+  onDownloadData,
   onSaveTimezone,
   onSaveHabitPreferences,
   onSignOut,
@@ -92,6 +96,19 @@ export function AccountPanel({
     }
   }
 
+  async function downloadData() {
+    setIsWorking(true);
+    setMessage("");
+    try {
+      await onDownloadData();
+      setMessage("Your data download is ready.");
+    } catch {
+      setMessage("Your data could not be downloaded. Nothing was removed.");
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-[rgba(19,35,31,0.45)] backdrop-blur-sm sm:place-items-center sm:p-6">
       <section aria-labelledby="account-title" aria-modal="true" role="dialog" className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] bg-[var(--paper)] p-6 shadow-2xl sm:rounded-[2rem] sm:p-8">
@@ -122,6 +139,13 @@ export function AccountPanel({
           <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Weekly reviews include counts and streaks only, never journal text.</p>
           <button type="submit" disabled={isWorking} className="mt-4 rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">Save writing rhythm</button>
         </form>
+
+        <section className="mt-5 rounded-2xl border border-[var(--line)] bg-white/55 p-5">
+          <h3 className="font-serif text-2xl">Your data</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Download a portable JSON copy of your preferences, prompts and every plain and formatted entry. Analytics and delivery diagnostics are excluded.</p>
+          <button type="button" disabled={isWorking || Boolean(dataDownloadBlockedReason)} onClick={() => void downloadData()} className="mt-4 w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">Download my data</button>
+          {dataDownloadBlockedReason && <p className="mt-2 text-xs font-semibold text-[var(--muted)]">{dataDownloadBlockedReason}</p>}
+        </section>
 
         <button type="button" disabled={isWorking} onClick={() => void onSignOut()} className="mt-6 w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-60">Sign out</button>
 

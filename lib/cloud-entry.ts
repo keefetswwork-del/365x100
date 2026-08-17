@@ -143,6 +143,33 @@ export async function fetchCloudEntries(
   return data.map(mapEntry);
 }
 
+export async function fetchCloudEntriesByDates(
+  client: Client,
+  entryDates: string[],
+): Promise<CloudEntry[]> {
+  const uniqueDates = [...new Set(entryDates)];
+  const entries: CloudEntry[] = [];
+  for (let index = 0; index < uniqueDates.length; index += 100) {
+    entries.push(...await fetchCloudEntries(client, uniqueDates.slice(index, index + 100)));
+  }
+  return entries.sort((a, b) => a.entryDate.localeCompare(b.entryDate));
+}
+
+export async function fetchAllCloudEntries(client: Client): Promise<CloudEntry[]> {
+  const entries: CloudEntry[] = [];
+  const pageSize = 250;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from("entries")
+      .select("*")
+      .order("entry_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new CloudRequestError("Entries could not be exported.");
+    entries.push(...data.map(mapEntry));
+    if (data.length < pageSize) return entries;
+  }
+}
+
 export async function saveCloudEntry(
   client: Client,
   input: {

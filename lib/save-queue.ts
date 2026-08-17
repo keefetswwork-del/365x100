@@ -18,6 +18,10 @@ export class CloudSaveQueue {
   private retryAttempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
+  private idleWaiters: Array<{
+    reject: (error: Error) => void;
+    resolve: () => void;
+  }> = [];
 
   constructor(
     private readonly execute: SaveExecutor,
@@ -46,11 +50,37 @@ export class CloudSaveQueue {
     void this.drain();
   }
 
+  whenIdle(): Promise<void> {
+    if (this.isIdle()) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      this.idleWaiters.push({ reject, resolve });
+    });
+  }
+
   stop(): void {
     this.stopped = true;
     this.pendingByDate.clear();
     this.pendingOrder.length = 0;
     this.clearRetry();
+    this.rejectIdleWaiters("Cloud saving stopped.");
+  }
+
+  private isIdle(): boolean {
+    return !this.active && this.pendingOrder.length === 0 && !this.retryTimer;
+  }
+
+  private resolveIdleWaiters(): void {
+    if (!this.isIdle()) return;
+    const waiters = this.idleWaiters.splice(0);
+    for (const waiter of waiters) waiter.resolve();
+  }
+
+  private rejectIdleWaiters(message: string): void {
+    const waiters = this.idleWaiters.splice(0);
+    for (const waiter of waiters) waiter.reject(new Error(message));
   }
 
   private clearRetry(): void {
@@ -85,6 +115,7 @@ export class CloudSaveQueue {
         const queuedIndex = this.pendingOrder.indexOf(input.entryDate);
         if (queuedIndex >= 0) this.pendingOrder.splice(queuedIndex, 1);
         this.callbacks.onConflict(conflictInput, result);
+        this.rejectIdleWaiters("Cloud save requires conflict review.");
         return;
       }
 
@@ -102,12 +133,14 @@ export class CloudSaveQueue {
       }
       if (error instanceof CloudRequestError && !error.retryable) {
         this.callbacks.onError();
+        this.rejectIdleWaiters("Cloud save failed.");
         return;
       }
 
       this.retryAttempt += 1;
       if (this.retryAttempt > this.maxRetries) {
         this.callbacks.onError();
+        this.rejectIdleWaiters("Cloud save retry limit reached.");
         return;
       }
 
@@ -125,6 +158,7 @@ export class CloudSaveQueue {
       if (!this.retryTimer && this.pendingOrder.length > 0 && this.retryAttempt === 0) {
         void this.drain();
       }
+      this.resolveIdleWaiters();
     }
   }
 }

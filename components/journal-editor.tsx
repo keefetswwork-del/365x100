@@ -24,6 +24,8 @@ import {
   saveCloudCache,
 } from "@/lib/cloud-cache";
 import {
+  fetchAllCloudEntries,
+  fetchCloudEntriesByDates,
   fetchCloudEntry,
   fetchProfile,
   mapProfileRow,
@@ -31,6 +33,11 @@ import {
   saveProfileTimezone,
 } from "@/lib/cloud-entry";
 import type { Database } from "@/lib/database.types";
+import {
+  buildPortableArchive,
+  downloadTextFile,
+  serializePlainTextEntries,
+} from "@/lib/entry-export";
 import {
   migrateAnonymousEntries,
   reconcileDirtyCaches,
@@ -43,6 +50,7 @@ import {
   saveRichEntry,
 } from "@/lib/entry-storage";
 import { getLocalDateString } from "@/lib/local-date";
+import { fetchEntryHistory } from "@/lib/history";
 import {
   fetchDailyPrompt,
   fetchHabitSummary,
@@ -78,6 +86,11 @@ import type {
   Profile,
 } from "@/types/cloud";
 import type { DailyPrompt, HabitPreferences, HabitSummary } from "@/types/habit";
+import type {
+  HistoryFilters,
+  HistoryPage,
+  JournalLibraryView,
+} from "@/types/history";
 
 const WORD_TARGET = 100;
 const SAVE_DELAY_MS = 300;
@@ -142,6 +155,7 @@ export function JournalEditor() {
   const [conflictWorking, setConflictWorking] = useState(false);
   const [bootstrapRetry, setBootstrapRetry] = useState(0);
   const [habitOpen, setHabitOpen] = useState(false);
+  const [habitInitialView, setHabitInitialView] = useState<JournalLibraryView>("calendar");
   const [habitLoading, setHabitLoading] = useState(false);
   const [habitSummary, setHabitSummary] = useState<HabitSummary | null>(null);
   const [todayDate, setTodayDate] = useState("");
@@ -151,6 +165,7 @@ export function JournalEditor() {
   const [dateNavigationWorking, setDateNavigationWorking] = useState(false);
   const [welcomeBackVisible, setWelcomeBackVisible] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [online, setOnline] = useState(true);
 
   const entryRef = useRef(entry);
   const richEntryRef = useRef<RichEntryDocument | null>(richEntry);
@@ -555,6 +570,19 @@ export function JournalEditor() {
   }, []);
 
   useEffect(() => {
+    function updateOnlineState() {
+      setOnline(navigator.onLine);
+    }
+    updateOnlineState();
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!authResolved || !client) {
       return;
     }
@@ -818,7 +846,8 @@ export function JournalEditor() {
     setAuthOpen(true);
   }
 
-  function openHabitDashboard() {
+  function openHabitDashboard(view: JournalLibraryView = "calendar") {
+    setHabitInitialView(view);
     const visibleDate = localDateRef.current || todayDateRef.current;
     if (visibleDate) {
       const selectedMonth = monthStart(visibleDate);
@@ -849,6 +878,61 @@ export function JournalEditor() {
         (editable ?? editorSectionRef.current)?.focus();
       });
     });
+  }
+
+  async function loadHistory(
+    filters: HistoryFilters,
+    beforeDate: string | null = null,
+  ): Promise<HistoryPage> {
+    if (!client || !session || !navigator.onLine) {
+      throw new Error("History requires a connection.");
+    }
+    return fetchEntryHistory(client, filters, beforeDate);
+  }
+
+  async function flushBeforeExport() {
+    if (!client || !session || !profile || !navigator.onLine) {
+      throw new Error("Export requires a connection.");
+    }
+    if (conflictsRef.current.length > 0) {
+      throw new Error("Review versions before exporting.");
+    }
+    persistCurrentImmediately();
+    await queueRef.current?.whenIdle();
+  }
+
+  async function exportEntries(entryDates?: string[]) {
+    if (!client) throw new Error("Authentication required.");
+    await flushBeforeExport();
+    const entries = entryDates
+      ? await fetchCloudEntriesByDates(client, entryDates)
+      : await fetchAllCloudEntries(client);
+    if (entryDates && entries.length !== new Set(entryDates).size) {
+      throw new Error("Not every selected entry could be loaded.");
+    }
+    const today = todayDateRef.current || getLocalDateString();
+    downloadTextFile(
+      `365x100-journal-${today}.txt`,
+      serializePlainTextEntries(entries),
+      "text/plain",
+    );
+  }
+
+  async function downloadPortableData() {
+    if (!client || !session || !profile) throw new Error("Authentication required.");
+    await flushBeforeExport();
+    const archive = await buildPortableArchive(client, {
+      email: session.user.email ?? "",
+      entries: await fetchAllCloudEntries(client),
+      preferences: preferencesFromProfile(profile),
+      profile,
+    });
+    const today = todayDateRef.current || getLocalDateString();
+    downloadTextFile(
+      `365x100-data-${today}.json`,
+      JSON.stringify(archive, null, 2),
+      "application/json",
+    );
   }
 
   useEffect(() => {
@@ -1040,6 +1124,13 @@ export function JournalEditor() {
   const promptHeading = dailyPrompt?.body ?? (isToday ? "What happened today?" : "What happened on this day?");
   const gapMessage = isToday && habitSummary ? missedDayMessage(habitSummary.missedDays) : null;
   const habitPreferences = profile ? preferencesFromProfile(profile) : null;
+  const exportBlockedReason = !online
+    ? "Reconnect to create a complete export."
+    : conflicts.length > 0
+      ? "Review versions before exporting."
+      : saveStatus === "error"
+        ? "Resolve the cloud save before exporting."
+        : null;
 
   return (
     <>
@@ -1077,7 +1168,7 @@ export function JournalEditor() {
                 <button type="button" aria-label="Previous day" disabled={!canNavigatePrevious || dateNavigationWorking} onClick={() => void navigateByDay(-1)} className="grid h-11 w-11 place-items-center rounded-full text-2xl text-[var(--ink)] outline-none transition hover:bg-white/55 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:pointer-events-none disabled:opacity-25">←</button>
               ) : <span aria-hidden="true" />}
               {signedIn ? (
-                <button ref={dateTriggerRef} type="button" disabled={!profile || dateNavigationWorking} onClick={openHabitDashboard} aria-label={`Open calendar for ${dateLabel}`} className="group flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--accent-dark)] outline-none transition hover:bg-white/50 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50 sm:px-5 sm:tracking-[0.17em]">
+                <button ref={dateTriggerRef} type="button" disabled={!profile || dateNavigationWorking} onClick={() => openHabitDashboard("calendar")} aria-label={`Open calendar for ${dateLabel}`} className="group flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--accent-dark)] outline-none transition hover:bg-white/50 focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50 sm:px-5 sm:tracking-[0.17em]">
                   <time dateTime={localDate || undefined}><span className="sm:hidden">{compactDateLabel}</span><span className="hidden sm:inline">{dateLabel}</span></time>
                   <span aria-hidden="true" className="text-base transition-transform group-hover:translate-y-0.5">▾</span>
                 </button>
@@ -1151,7 +1242,7 @@ export function JournalEditor() {
                 </div>
               </div>
               <div className="mt-5 sm:mt-0 sm:text-right">
-                <button type="button" onClick={() => signedIn ? openHabitDashboard() : openAuthPanel()} className="w-full rounded-full bg-[var(--paper)] px-5 py-3 text-sm font-bold text-[var(--ink)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--ink)] sm:w-auto">
+                <button type="button" onClick={() => signedIn ? openHabitDashboard("progress") : openAuthPanel()} className="w-full rounded-full bg-[var(--paper)] px-5 py-3 text-sm font-bold text-[var(--ink)] outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--ink)] sm:w-auto">
                   {signedIn ? "View your progress" : "Save your entry and begin your year"}
                 </button>
               </div>
@@ -1161,7 +1252,7 @@ export function JournalEditor() {
         {signedIn && (
           <nav aria-label="Writing navigation" className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 rounded-full border border-white/70 bg-[var(--paper)]/95 p-1.5 shadow-xl backdrop-blur sm:hidden">
             <button type="button" onClick={() => void returnToToday()} className={`rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${isToday ? "bg-[var(--ink)] text-white" : ""}`}>Today</button>
-            <button type="button" onClick={openHabitDashboard} className="rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Calendar</button>
+            <button type="button" onClick={() => openHabitDashboard("history")} className="rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Library</button>
             <button type="button" onClick={() => setAccountOpen(true)} className="rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Account</button>
           </nav>
         )}
@@ -1171,9 +1262,9 @@ export function JournalEditor() {
       <ProductStoryPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
       {timezoneRequired && session && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard loading={habitLoading} onClose={closeHabitDashboard} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} />
+      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} />
       {profile && session && (
-        <AccountPanel key={profile.userId} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
+        <AccountPanel key={profile.userId} dataDownloadBlockedReason={exportBlockedReason} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onDownloadData={downloadPortableData} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}
       <ConflictPanel conflict={conflicts[0] ?? null} isWorking={conflictWorking} onKeepCloud={() => void keepCloudVersion()} onKeepLocal={() => void keepLocalVersion()} />
     </>

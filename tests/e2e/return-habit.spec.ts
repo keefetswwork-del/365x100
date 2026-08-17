@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { createClient } from "@supabase/supabase-js";
 import type { APIRequestContext, Page } from "@playwright/test";
@@ -54,6 +55,15 @@ function offsetDate(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
+function historyDate(date: string): string {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    weekday: "short",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
 test("configures return habits, persists prompts, and safely edits past entries", async ({
   browser,
   context,
@@ -104,9 +114,11 @@ test("configures return habits, persists prompts, and safely edits past entries"
     const yesterday = offsetDate(today!, -1);
     const twoDaysAgo = offsetDate(today!, -2);
     const threeDaysAgo = offsetDate(today!, -3);
+    const seededYesterday = ["Yesterday", "was", "complete.", ...Array.from({ length: 97 }, (_, index) => `detail${index + 1}`)].join(" ");
+    const seededEarlier = ["An", "uncached", "earlier", "entry.", ...Array.from({ length: 96 }, (_, index) => `earlier${index + 1}`)].join(" ");
     const inserted = await admin.from("entries").insert([
-      { content: "Yesterday was complete.", entry_date: yesterday, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
-      { content: "An uncached earlier entry.", entry_date: threeDaysAgo, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
+      { content: seededYesterday, entry_date: yesterday, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
+      { content: seededEarlier, entry_date: threeDaysAgo, user_id: userId, word_count: 100, completed_at: new Date().toISOString() },
     ]);
     expect(inserted.error).toBeNull();
 
@@ -114,6 +126,30 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(refreshedPrompt ?? "");
     await expect(page.getByText("1-day streak", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "1-day streak" })).toHaveCount(0);
+
+    await page.getByLabel("Writing navigation").getByRole("button", { name: "Library" }).click();
+    let library = page.getByRole("dialog", { name: "A record of showing up." });
+    await expect(library.getByRole("tab", { name: "History" })).toHaveAttribute("aria-selected", "true");
+    const search = library.getByLabel("Search your writing");
+    await search.fill("Yesterday was complete.");
+    await expect(library.getByText("Yesterday was complete.")).toBeVisible();
+    expect(page.url()).not.toContain("Yesterday");
+    await library.getByRole("button", { name: "Select entries" }).click();
+    await library.getByLabel(`Select entry for ${historyDate(yesterday)}`).check();
+    const selectedDownloadPromise = page.waitForEvent("download");
+    await library.getByRole("button", { name: "Export selected (1)" }).click();
+    const selectedDownload = await selectedDownloadPromise;
+    expect(selectedDownload.suggestedFilename()).toMatch(/^365x100-journal-\d{4}-\d{2}-\d{2}\.txt$/);
+    const selectedPath = await selectedDownload.path();
+    expect(selectedPath).not.toBeNull();
+    const selectedText = readFileSync(selectedPath!, "utf8");
+    expect(selectedText).toContain("Yesterday was complete.");
+    expect(selectedText).not.toContain("An uncached earlier entry.");
+
+    await library.getByRole("button", { name: new RegExp(historyDate(yesterday)) }).click();
+    const historyEditor = page.locator('[contenteditable="true"]');
+    await expect(historyEditor).toHaveText(seededYesterday);
+    await page.getByRole("button", { name: "Return to today" }).first().click();
 
     const dateTrigger = page.getByRole("button", { name: /^Open calendar for / });
     await dateTrigger.click();
@@ -139,7 +175,7 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await page.getByRole("button", { name: "Previous day" }).click();
     const pastEditor = page.locator('[contenteditable="true"]');
     await expect(pastEditor).toBeFocused();
-    await expect(pastEditor).toHaveText("Yesterday was complete.");
+    await expect(pastEditor).toHaveText(seededYesterday);
     const updatedPastEntry = Array.from({ length: 100 }, (_, index) => `updated${index + 1}`).join(" ");
     await pastEditor.fill(updatedPastEntry);
     await expect(page.getByText(/Saving locally|Saving to cloud/)).toBeVisible();
@@ -162,6 +198,38 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await progress.getByRole("button", { name: `${threeDaysAgo}: complete, 100 words` }).click();
     await expect(page.getByRole("button", { name: "Previous day" })).toBeDisabled();
     await page.getByRole("button", { name: "Return to today" }).first().click();
+
+    await page.getByLabel("Writing navigation").getByRole("button", { name: "Library" }).click();
+    library = page.getByRole("dialog", { name: "A record of showing up." });
+    await expect(library.getByText("An uncached earlier entry.")).toBeVisible();
+    const allDownloadPromise = page.waitForEvent("download");
+    await library.getByRole("button", { name: "Export all as text" }).click();
+    const allDownload = await allDownloadPromise;
+    const allPath = await allDownload.path();
+    expect(allPath).not.toBeNull();
+    const allText = readFileSync(allPath!, "utf8");
+    expect(allText).toContain("An uncached earlier entry.");
+    expect(allText).toContain(updatedPastEntry);
+    expect(allText).toContain(backfill);
+    expect(allText.indexOf("An uncached earlier entry.")).toBeLessThan(allText.indexOf(backfill));
+    expect(allText.indexOf(backfill)).toBeLessThan(allText.indexOf(updatedPastEntry));
+    await library.getByRole("button", { name: "Close" }).click();
+
+    await page.getByLabel("Writing navigation").getByRole("button", { name: "Account" }).click();
+    const accountAfterWriting = page.getByRole("dialog", { name: email });
+    const archiveDownloadPromise = page.waitForEvent("download");
+    await accountAfterWriting.getByRole("button", { name: "Download my data" }).click();
+    const archiveDownload = await archiveDownloadPromise;
+    expect(archiveDownload.suggestedFilename()).toMatch(/^365x100-data-\d{4}-\d{2}-\d{2}\.json$/);
+    const archivePath = await archiveDownload.path();
+    expect(archivePath).not.toBeNull();
+    const archive = JSON.parse(readFileSync(archivePath!, "utf8")) as Record<string, unknown>;
+    expect(archive).toMatchObject({ format: "365x100-portable-archive", version: 1 });
+    expect(JSON.stringify(archive)).toContain(updatedPastEntry);
+    expect(JSON.stringify(archive)).toContain("contentRich");
+    expect(JSON.stringify(archive)).not.toContain(userId);
+    expect(JSON.stringify(archive)).not.toContain("product_events");
+    await accountAfterWriting.getByRole("button", { name: "Close" }).click();
 
     const secondContext = await browser.newContext();
     const secondPage = await secondContext.newPage();
