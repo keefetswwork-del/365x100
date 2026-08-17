@@ -37,12 +37,20 @@ test("formats and restores an anonymous entry without changing its word count", 
 
   await page.getByRole("button", { name: "About" }).click();
   const about = page.getByRole("dialog", {
-    name: "One hundred words makes today rememberable.",
+    name: "Write at least 100 words every day and preserve the story of your year.",
   });
-  await expect(about).toContainText("Monthly and annual digital books");
-  await expect(about).toContainText(
-    "not available for purchase or generation yet",
-  );
+  await expect(about).toContainText("365 days. 100 words a day. Your year in writing.");
+  await expect(about).toContainText("No fixed agenda. Write about anything");
+  await expect(about).toContainText("monthly digital storybook");
+  await expect(about.getByText("In development", { exact: true })).toHaveCount(2);
+  await expect(about.getByText("Coming later", { exact: true })).toHaveCount(0);
+  await expect(about.getByRole("button", { name: "Close" })).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(about).toBeHidden();
+  await page.getByRole("button", { name: "About" }).click();
+  await page.mouse.click(5, 5);
+  await expect(about).toBeHidden();
 });
 
 test("preserves one selection through every inline, typography, palette, and alignment control", async ({ page }) => {
