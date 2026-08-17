@@ -451,3 +451,39 @@ Mobile controls do not obstruct the editor or keyboard.
 All toolbar controls are keyboard accessible, labelled and visibly focused.
 The product story is discoverable without replacing the direct-to-editor homepage.
 Future book language is clearly labelled as coming later.
+
+Build 3.2 addendum: History, search and export foundation
+
+Build 3.2 is implemented after Build 3.1: Rich writing and product story and before Build 4: Monetisation, even though this addendum appears at the end of the roadmap.
+
+Add:
+
+A single signed-in Journal Library that extends the existing Progress and Calendar dashboard
+Complete chronological history browsing without duplicating the calendar or past-entry editor
+Private, case-insensitive and language-neutral search across authoritative plain-text entries
+Optional date filters and paginated history results
+Safe excerpts, word counts and completed or started states in history results
+Opening any calendar or history result in the existing rich editor
+Selection of individual entries for chronological plain-text export
+Plain-text export of every entry
+A portable JSON data download containing profile preferences, plain and rich entries and prompt assignments
+
+Keep existing rich-entry persistence, optimistic conflict handling, RLS ownership, local caches and offline safeguards. Search terms and journal content must never appear in URLs, analytics, logs, telemetry or error messages. Complete search and export require connectivity so the interface never represents a partial offline result as complete.
+
+Do not add:
+
+Payment gates or a 30-day history restriction
+PDF or generated-book output
+Printing or preorder handling
+Entry sharing or public links
+Third-party search or analytics services
+Another history page, Render service or deployment environment
+
+Success criteria
+
+A user can find and open an old entry within 30 seconds.
+Search returns accurate owned results without exposing another user's writing.
+Every selected entry appears once in chronological export order.
+The complete data download includes every owned entry and the user's preferences.
+Pending edits are included before export or export is safely blocked.
+Mobile and desktop library navigation remain accessible and do not duplicate Calendar.
