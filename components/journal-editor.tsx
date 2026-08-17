@@ -11,6 +11,7 @@ import {
 
 import { AccountPanel } from "@/components/account-panel";
 import { AuthPanel } from "@/components/auth-panel";
+import { BrandWordmark } from "@/components/brand-wordmark";
 import { ConflictPanel } from "@/components/conflict-panel";
 import { HabitDashboard } from "@/components/habit-dashboard";
 import { HabitOnboarding } from "@/components/habit-onboarding";
@@ -1137,8 +1138,8 @@ export function JournalEditor() {
       <main className={`journal-shell relative min-h-screen overflow-hidden px-4 py-5 sm:px-8 sm:py-8 lg:px-12 ${signedIn ? "pb-24 sm:pb-8" : ""}`}>
         <div className="relative mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-6xl flex-col sm:min-h-[calc(100vh-4rem)]">
           <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
-            <a href="#editor" className="rounded-sm font-serif text-2xl font-semibold tracking-[-0.04em] text-[var(--ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--paper)]">
-              365 <span className="text-[var(--accent)]">×</span> 100
+            <a href="#editor" className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--paper)]">
+              <BrandWordmark className="text-2xl" />
             </a>
             <div className="flex items-center gap-3 sm:gap-5">
               <button type="button" onClick={() => setAboutOpen(true)} className="rounded-full px-1 py-2 text-[0.65rem] font-bold text-[var(--muted)] outline-none hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:px-2 sm:text-xs"><span className="sm:hidden">About</span><span className="hidden sm:inline">About 365x100</span></button>

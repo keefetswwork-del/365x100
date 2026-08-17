@@ -1,5 +1,34 @@
 import { expect, test } from "@playwright/test";
 
+test("uses the canonical website wordmark", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page).toHaveTitle("365x100 — Write today");
+
+  const homeLink = page.getByRole("link", { name: "365x100", exact: true });
+  await expect(homeLink).toBeVisible();
+  await expect(homeLink).toHaveAttribute("href", "#editor");
+
+  const wordmark = homeLink.getByRole("img", { name: "365x100", exact: true });
+  const blackText = wordmark.locator('[aria-hidden="true"]');
+  const redX = blackText.locator("span");
+
+  await expect(blackText).toHaveText("365x100");
+  await expect(blackText).toHaveCSS("color", "rgb(0, 0, 0)");
+  await expect(redX).toHaveCSS("color", "rgb(255, 49, 49)");
+  await expect(wordmark).toHaveCSS("font-weight", "700");
+  expect(await wordmark.evaluate((element) => getComputedStyle(element).fontFamily)).toContain("League");
+
+  await homeLink.focus();
+  await expect(homeLink).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(homeLink).toBeVisible();
+
+  await page.goto("/auth/callback");
+  await expect(page.getByRole("img", { name: "365x100", exact: true })).toBeVisible();
+});
+
 test("completes and restores the anonymous writing flow", async ({ page }) => {
   await page.goto("/");
 
