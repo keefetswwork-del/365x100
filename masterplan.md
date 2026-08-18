@@ -860,6 +860,17 @@ Removing a photograph must not remove or alter the written entry.
 Users must retain access to existing photographs if their plan changes.
 Free-plan limits restrict new uploads, not access to existing media.
 3.3.2 Scope
+
+Locked implementation decisions
+
+- Every accepted original is re-encoded and stored as WebP; JPEG and PNG are input formats only.
+- Free access includes 10 currently attached photos. Premium is founder-granted during beta and is not presented as a purchasable product.
+- Existing users accept the revised media-specific Privacy Policy immediately before their first photo upload. New users accept the current policy during normal onboarding.
+- Download my data produces a ZIP containing the portable JSON archive and processed photos.
+- Build 3.3.2 adds cleanup support for internal or future entry deletion, but no visible Delete entry action.
+- Photographs are never analysed by AI in this build.
+- Media analytics use closed events and coarse size, duration, failure and entitlement buckets. Device category is not collected.
+
 1. Image attachment
 
 Allow a signed-in user to attach one image to an entry.
@@ -918,7 +929,7 @@ Never enlarge a smaller image
 
 If an image cannot be reduced to 1 MB while maintaining an acceptable minimum quality, the upload must fail with a clear explanation. The application must not silently upload an oversized file.
 
-PNG photographs may be converted to JPEG or WebP when necessary to reach the 1 MB limit. Transparency must be handled against a safe, consistent background if conversion removes it.
+Every accepted photograph is converted to WebP. Transparency is preserved where supported by the browser encoder.
 
 3. Image position
 
@@ -966,7 +977,7 @@ Reaching the limit must not affect the ability to write, edit or save entries.
 
 When a free user reaches 10 stored images, show:
 
-You’ve used your 10 complimentary photo uploads. Upgrade to add photos to future entries.
+You’ve used your 10 complimentary photo uploads. Request photo beta access to add photos to future entries.
 
 Do not automatically delete, hide or reduce the quality of existing images.
 
@@ -1139,7 +1150,6 @@ Processing duration
 Upload duration
 Failure category
 Free or Premium entitlement
-Mobile or desktop device category
 
 Never record:
 
