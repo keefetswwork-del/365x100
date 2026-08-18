@@ -4,6 +4,13 @@ test("uses the canonical website wordmark", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveTitle("365x100 — Write today");
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    "Write 100 words a day and preserve the story of your year. Track your progress, revisit your memories, and turn 365 days or each month of writing into a personal chapter.",
+  );
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/365x100-icon.png");
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "/apple-touch-icon.png");
+  await expect(page.locator('link[href="/favicon.ico"]')).toHaveCount(0);
   await expect(page.getByText("Private Beta", { exact: true })).toBeVisible();
 
   const homeLink = page.getByRole("link", { name: "365x100", exact: true });

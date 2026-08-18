@@ -23,7 +23,23 @@ const leagueSpartan = League_Spartan({
 
 export const metadata: Metadata = {
   title: "365x100 — Write today",
-  description: "A private daily writing practice, one hundred words at a time.",
+  description: "Write 100 words a day and preserve the story of your year. Track your progress, revisit your memories, and turn 365 days or each month of writing into a personal chapter.",
+  icons: {
+    apple: [
+      {
+        sizes: "180x180",
+        type: "image/png",
+        url: "/apple-touch-icon.png",
+      },
+    ],
+    icon: [
+      {
+        sizes: "512x512",
+        type: "image/png",
+        url: "/365x100-icon.png",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
