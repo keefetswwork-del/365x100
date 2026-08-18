@@ -581,6 +581,243 @@ Build 3.3 is complete when:
 - The complete automated test suite and production smoke test pass.
 
 ---
+Build 3.3.1 — Life Story Without Streak Pressure
+Purpose
+
+Reposition 365×100 from a strict daily journalling challenge into a forgiving life-preservation product.
+
+The product should encourage regular writing without implying that missed days represent failure. The 100-word target remains a useful guide, while the primary value becomes preserving memories and gradually turning them into monthly chapters and personal books.
+
+Core positioning
+
+Primary promise
+
+Preserve your life story, 100 words at a time.
+
+Supporting message
+
+Write about your days, memories and milestones whenever you want. 365×100 keeps everything organised and turns your writing into a personal book.
+
+Product principles
+Regular writing is encouraged, but perfect daily consistency is not required.
+Every saved entry contributes to the user’s life story, regardless of length.
+Missing a day must not reset progress or create a sense of failure.
+The product celebrates memories preserved rather than days missed.
+The 100-word target is a gentle goal, not a saving requirement.
+Users retain access to and control over all their writing.
+Chapter and book thresholds exist to ensure meaningful output, not to punish inconsistent users.
+3.3.1 Scope
+1. Entry completion
+Allow users to save entries below 100 words.
+Continue displaying the live word count.
+Present 100 words as a gentle target.
+Do not mark entries below 100 words as failed or incomplete.
+Preserve existing rich-text, autosave and editing behaviour.
+Entries of any non-zero length count as writing days.
+
+Suggested interface language:
+
+43 words preserved
+Today’s gentle goal: 100 words
+100 words captured today
+Saved to your story
+2. Replace streak pressure
+
+Remove the consecutive-day streak as the dominant measure of progress.
+
+Replace or supplement it with a Writing Rhythm view showing:
+
+Writing days in the last seven days
+Writing days during the current calendar month
+Memories or entries preserved this month
+Total words preserved
+Most recent writing date
+
+Suggested language:
+
+You wrote on 4 of the last 7 days.
+8 memories preserved this month.
+Welcome back. Your story is still here.
+Your August chapter is taking shape.
+
+A current streak may remain as an optional secondary statistic, but it must not dominate the dashboard or trigger failure messaging when it ends.
+
+3. Missed-day messaging
+
+Replace guilt-oriented or loss-oriented messaging.
+
+Do not use:
+
+You lost your streak.
+You missed yesterday.
+Start over.
+Incomplete day.
+You are behind.
+
+Use:
+
+Welcome back.
+What would you like to remember?
+Your story is still here whenever you’re ready.
+You can also write about an earlier day.
+4. Backdated memories
+Allow users to create an entry for a previous date.
+Clearly show the selected entry date before saving.
+Prevent accidental replacement when an entry already exists for that date.
+Ask whether the user wants to edit the existing entry or cancel.
+Assign backdated entries to the correct calendar month and personal writing year.
+Ensure backdated entries update chapter eligibility and Writing Rhythm statistics.
+5. Monthly Chapter eligibility
+
+A calendar month becomes eligible for a Monthly Chapter after the user has written on at least 10 distinct days during that month.
+
+Rules:
+
+Entry length does not affect eligibility.
+Multiple entries on the same date count as one writing day.
+The month follows the user’s local timezone.
+The chapter contains all entries from that calendar month.
+Entries remain editable after chapter generation.
+Editing or adding an entry allows the chapter to be regenerated.
+Months with fewer than 10 writing days remain visible in the user’s history but are not proactively presented as completed chapters.
+Users retain normal export access regardless of chapter eligibility.
+
+Progress language:
+
+7 of 10 writing days — 3 more to complete your September chapter.
+Your September chapter is ready.
+You preserved 14 days from September.
+
+The interface must not suggest that the user failed if the threshold is not reached.
+
+6. Personal Annual Book eligibility
+
+The Personal Year remains a rolling 365-day period beginning on the user’s first saved entry.
+
+At the end of that period:
+
+Generate an Annual Book if the user has written on at least 60 distinct days.
+Include every entry within the Personal Year.
+Organise entries chronologically using calendar months as internal sections.
+Permit partial first and final calendar-month sections.
+Do not require 12 completed Monthly Chapters.
+Monthly Chapter eligibility does not affect Annual Book inclusion.
+Entries from months with fewer than 10 writing days are still included.
+If the user has fewer than 60 writing days, do not proactively generate an Annual Book.
+Users below the threshold retain access to all entries and normal exports.
+
+Example:
+
+Personal Year: 17 August 2026–16 August 2027
+Sections: August 2026, September 2026 … August 2027
+All entries within that 365-day period are included.
+
+7. Annual participation milestones
+
+Use milestones for encouragement without making them quality rankings:
+
+30 writing days: Your story is taking shape.
+60 writing days: Your year can become a book.
+120 writing days: A substantial year in writing.
+240 writing days: A richly documented year.
+365 writing days: Every day preserved.
+
+A meaningful year may contain fewer but more substantial entries. The 60-day threshold exists only to ensure the generated Annual Book contains enough material.
+
+8. Terminology
+
+Prefer:
+
+Writing day
+Memory
+Entry
+Writing Rhythm
+Words preserved
+Monthly Chapter
+Personal Year
+Annual Book
+
+Avoid making these dominant:
+
+Perfect streak
+Failed day
+Missed target
+Incomplete entry
+Broken streak
+9. Analytics
+
+Record only privacy-safe operational events. Never capture journal contents.
+
+Suggested events:
+
+short_entry_saved
+entry_100_words_reached
+backdated_entry_created
+writing_rhythm_viewed
+monthly_chapter_threshold_reached
+annual_book_threshold_reached
+welcome_back_message_shown
+
+Measure:
+
+Percentage of saved entries below 100 words
+Writing days per user per month
+Return rate after gaps of 3, 7 and 30 days
+Percentage reaching 10 writing days in a month
+Percentage reaching 30, 60 and 120 writing days in a Personal Year
+Whether forgiving messaging improves user reactivation
+Out of scope
+
+Build 3.3.1 does not include:
+
+Monthly Chapter layout or PDF generation
+Annual Book layout or PDF generation
+Printed books
+Stripe subscriptions
+Paywalls or 30-day history restrictions
+Push notifications
+AI rewriting, summarisation or analysis of private entries
+Public or social journal sharing
+
+Chapter and book generation remain part of Build 3.4.
+
+Success conditions
+
+Build 3.3.1 is complete when:
+
+A user can save any non-empty entry below 100 words.
+A sub-100-word entry is stored, synced, searchable, editable and exportable.
+The interface describes 100 words as a target rather than a requirement.
+No core screen describes a missed day or broken streak as failure.
+Writing Rhythm correctly calculates distinct writing days for the previous seven days and current calendar month.
+Users returning after a gap receive neutral or welcoming messaging.
+A user can create an entry for an earlier date.
+Existing-entry conflicts for backdated dates are handled without silent overwriting.
+Backdated entries are assigned to the correct local calendar date and Personal Year.
+Monthly Chapter eligibility activates at exactly 10 distinct writing days within a calendar month.
+Nine writing days do not activate Monthly Chapter eligibility.
+Multiple entries on the same date do not count as multiple writing days.
+Annual Book eligibility activates at exactly 60 distinct writing days within the Personal Year.
+Fifty-nine writing days do not activate Annual Book eligibility.
+Monthly Chapter eligibility has no effect on Annual Book inclusion.
+Entries from months below the monthly threshold remain included in the Annual Book.
+Entries from partial first and final calendar months remain part of the relevant Personal Year.
+Users can access and export their writing even when chapter or annual-book thresholds are not reached.
+Existing entries, rich-text formatting, search, history and exports continue working.
+Analytics record only operational metadata and never entry titles or contents.
+Automated tests cover threshold boundaries, timezone boundaries, backdating and existing-entry conflicts.
+Production testing confirms short-entry saving, backdating, cross-device restoration and threshold calculations.
+Validation targets
+
+These are product-validation targets, not release blockers:
+
+At least 30% of activated users write on three or more days during their first week.
+At least 20% write on 10 distinct days during their first 30 days.
+At least 15% return after a gap of seven or more days.
+At least 50% of returning users successfully save another entry.
+Users understand that 100 words is encouraged but not mandatory.
+Users do not interpret an unfinished Monthly Chapter as losing their writing.
+Users understand that 60 writing days during their Personal Year unlock an Annual Book.
 
 # Addendum: Build 3.4 — Monthly Chapters and Annual Digital Books
 
