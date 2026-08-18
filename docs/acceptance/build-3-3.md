@@ -31,12 +31,16 @@ This report separates automated verification from production acceptance. It cont
 
 | Check | Status |
 | --- | --- |
-| Additive migration applied to production | Pending deployment |
-| Existing Build 3.2 client saves after migration | Pending production smoke test |
-| New and existing account consent | Pending disposable-account test |
-| Writing-year progress and second-device rich restoration | Pending disposable-account test |
+| Additive migration applied to production | Passed; local and remote migration history include `20260817233000` |
+| Existing Build 3.2 client saves after migration | Passed; founder-confirmed cloud save and refresh restoration before the frontend release |
+| Existing-account legal consent | Passed; founder-confirmed production acceptance and continued cloud saving |
+| New-account legal consent | Pending a separate production signup test; automated coverage passes |
+| Writing-year progress | Passed; founder-confirmed production Progress display |
+| Authenticated cloud save and refresh restoration | Passed; founder-confirmed after the Build 3.3 release |
+| Second-device rich restoration | Pending a separate production browser-context test; automated coverage passes |
 | Founder writing-year and sanitized system-health snippets | Pending Supabase report setup |
-| Render static deployment and mobile/desktop smoke test | Pending deployment |
+| Render static deployment and desktop/mobile smoke test | Passed; commit `e84902d`, exported routes and icon assets returned 200, responsive layouts had no settled overflow, and the browser console had no errors |
+| Favicon and search metadata | Passed; new PNG icon URLs and exact description are live, with the old favicon absent |
 
 ## Operational limitation
 
