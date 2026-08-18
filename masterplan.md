@@ -841,6 +841,459 @@ Users understand that 100 words is encouraged but not mandatory.
 Users do not interpret an unfinished Monthly Chapter as losing their writing.
 Users understand that 60 writing days during their Personal Year unlock an Annual Book.
 
+Build 3.3.2 — Private Media Uploads
+Purpose
+
+Allow users to attach one photograph to each journal entry, making their memories and future books more visually meaningful without turning 365×100 into a general photo-storage application.
+
+Photographs supplement the user’s writing. Writing remains the primary content of every entry.
+
+Product principles
+Each entry may contain a maximum of one photograph.
+Photographs are optional.
+The photograph always appears above the written entry.
+Uploading a photograph must never be required to save an entry.
+Images must remain private and accessible only to their owner.
+Images must be compressed before storage to control costs and loading time.
+Images must not be sent to an AI provider during this build.
+Removing a photograph must not remove or alter the written entry.
+Users must retain access to existing photographs if their plan changes.
+Free-plan limits restrict new uploads, not access to existing media.
+3.3.2 Scope
+1. Image attachment
+
+Allow a signed-in user to attach one image to an entry.
+
+Supported formats:
+
+JPEG
+JPG
+PNG
+WebP
+
+Unsupported formats include:
+
+HEIC
+HEIF
+GIF
+SVG
+BMP
+TIFF
+PDF
+Video
+Audio
+
+Only one image may be attached to each entry.
+
+Users can:
+
+Add an image
+Preview it before saving
+Replace it
+Remove it
+Open it in a larger preview
+Save an entry without an image
+Add an image to an existing entry
+Remove an image without affecting the entry text
+2. File-size rules
+
+The original selected file must not exceed 10 MB.
+
+Before upload, the application must:
+
+Validate the actual file type.
+Reject files larger than 10 MB.
+Correct image orientation where necessary.
+Resize the image if required.
+Strip unnecessary metadata, including location information.
+Compress the processed image to 1 MB or smaller.
+Preserve the original aspect ratio.
+Upload only the processed version.
+
+Recommended maximum image dimensions:
+
+Maximum long edge: 2,500 pixels
+Preserve aspect ratio
+Never enlarge a smaller image
+
+If an image cannot be reduced to 1 MB while maintaining an acceptable minimum quality, the upload must fail with a clear explanation. The application must not silently upload an oversized file.
+
+PNG photographs may be converted to JPEG or WebP when necessary to reach the 1 MB limit. Transparency must be handled against a safe, consistent background if conversion removes it.
+
+3. Image position
+
+The photograph must appear only at the top of the entry.
+
+Journal layout:
+
+Entry date
+Photograph
+Written content
+Entry metadata and controls
+
+Book layout:
+
+Entry date or heading
+Photograph
+Written entry
+
+Users cannot:
+
+Insert photographs between paragraphs
+Drag photographs into the rich-text editor
+Change the photograph’s position
+Add multiple photographs
+Add captions during this build
+Crop or apply filters
+
+The photograph’s placement must remain consistent across the editor, history, search results, previews and future digital books.
+
+4. Free-plan allowance
+
+Free users may store a maximum of 10 images across their account.
+
+Rules:
+
+Each attached image counts as one image.
+The limit applies to currently stored images.
+Replacing an image does not consume an additional slot after the replacement succeeds.
+Deleting an image frees one slot.
+Deleting an entry with an attached image frees one slot.
+A failed upload does not consume a slot.
+Images belonging to deleted entries must not continue counting towards the allowance.
+Existing images remain viewable, downloadable and removable after the limit is reached.
+Reaching the limit must not affect the ability to write, edit or save entries.
+
+When a free user reaches 10 stored images, show:
+
+You’ve used your 10 complimentary photo uploads. Upgrade to add photos to future entries.
+
+Do not automatically delete, hide or reduce the quality of existing images.
+
+5. Premium allowance
+
+Premium users may attach one photograph to every entry, subject to reasonable fair-use and storage safeguards.
+
+Premium users must still follow:
+
+One image per entry
+Maximum original upload size of 10 MB
+Supported file-type restrictions
+Compression to 1 MB or smaller
+
+Until subscriptions are implemented, Premium entitlement should be controlled through the existing beta-access or entitlement system without exposing an incomplete payment flow.
+
+6. Upload experience
+
+The entry editor should include a compact media control:
+
+Add a photo
+JPEG, PNG or WebP · Maximum 10 MB
+
+After selection, show:
+
+Local preview
+Processing status
+Upload status
+Replace action
+Remove action
+Clear error messaging
+
+Suggested statuses:
+
+Preparing photo…
+Uploading photo…
+Photo added
+Photo upload failed
+This file is larger than 10 MB.
+Please choose a JPEG, PNG or WebP image.
+We couldn’t compress this image. Please choose another photo.
+
+The user must not need to reselect or rewrite their entry text if the image upload fails.
+
+7. Saving behaviour
+
+Text and media must be handled safely.
+
+Required behaviour:
+
+Entry text autosaves independently from the photograph.
+A failed image upload must not discard text.
+An interrupted upload must not create a broken attachment.
+An image is associated with the entry only after upload completion.
+Replacing an image must not delete the existing image until the replacement succeeds.
+Removing an image must not remove the written entry.
+Saving or editing text must not unnecessarily re-upload the photograph.
+Duplicate clicks must not create duplicate stored objects.
+Navigating away during an active upload must provide clear status or cancellation handling.
+8. Storage architecture
+
+Store media in a private Supabase Storage bucket.
+
+Each media record should contain sufficient metadata to manage the file safely:
+
+Media identifier
+User identifier
+Entry identifier
+Private storage path
+Processed MIME type
+Processed file size
+Width
+Height
+Created timestamp
+Updated timestamp
+
+Do not store permanent public URLs.
+
+Access must use authenticated requests or short-lived signed URLs.
+
+The storage path must be scoped to the owning user and use non-guessable identifiers.
+
+Example:
+
+journal-media/{user_id}/{entry_id}/{media_id}.webp
+9. Security and privacy
+
+Media uploads must follow the same privacy standard as journal entries.
+
+Required controls:
+
+Private storage bucket
+User-specific access policies
+Users can access only their own images
+MIME type validated from file contents
+File extensions cannot be trusted as validation
+SVG and executable content rejected
+Location and unnecessary EXIF metadata removed
+Non-guessable storage paths
+Short-lived signed URLs where required
+No photograph included in operational analytics
+No image contents, filenames or URLs recorded in analytics
+No image sent to OpenAI or another AI provider
+Account deletion removes all associated media
+Entry deletion removes its associated media
+Removed and replaced files are cleaned up safely
+
+The Privacy Policy should be reviewed before public launch to confirm that uploaded media, storage, deletion and AI processing are accurately described.
+
+10. Book compatibility
+
+Build 3.3.2 does not generate Monthly Chapters or Annual Books, but uploaded images must be stored in a way that Build 3.4 can use.
+
+Future book rules:
+
+The image appears above its corresponding entry.
+The image is included by default.
+The image’s aspect ratio is preserved.
+The image must not be stretched or distorted.
+The book generator may scale the image to fit the page.
+The image must remain associated with its original entry and date.
+The image itself is not provided to AI unless a future opt-in feature explicitly permits it.
+
+The AI editorial process should use the entry text. The deterministic book-layout system should insert the photograph afterward.
+
+11. Deletion and cleanup
+
+When a user removes an image:
+
+Remove its association with the entry.
+Remove its media record.
+Delete the stored object.
+Update the user’s current media count.
+
+When an entry is deleted:
+
+Delete its associated media record.
+Delete its stored object.
+Delete the entry.
+Update the user’s media count.
+
+When an account is deleted:
+
+Remove every stored image owned by the user.
+Remove all corresponding media records.
+Confirm that no orphaned files remain.
+
+A scheduled cleanup process should identify abandoned uploads and orphaned storage objects created by interrupted operations.
+
+12. Analytics
+
+Record only privacy-safe operational events.
+
+Suggested events:
+
+photo_selected
+photo_processing_completed
+photo_processing_failed
+photo_upload_completed
+photo_upload_failed
+photo_replaced
+photo_removed
+free_photo_limit_reached
+
+Permitted metadata:
+
+Processed file-size range
+Processed file type
+Processing duration
+Upload duration
+Failure category
+Free or Premium entitlement
+Mobile or desktop device category
+
+Never record:
+
+Original filename
+Storage path
+Signed URL
+Image contents
+Entry contents
+Extracted image metadata
+People, objects or text detected within the photograph
+Out of scope
+
+Build 3.3.2 does not include:
+
+More than one photograph per entry
+Inline rich-text images
+Photograph captions
+Cropping
+Filters
+Rotation controls
+Photo albums
+Image search
+Public sharing
+Collaborative galleries
+HEIC or HEIF support
+GIF support
+Videos
+Audio recordings
+Camera-roll integrations
+Google Photos integration
+Instagram integration
+AI image analysis
+AI-generated image descriptions
+AI-generated photographs
+Monthly Chapter generation
+Annual Book generation
+Printed-book ordering
+Payments or subscription checkout
+Success conditions
+
+Build 3.3.2 is complete when:
+
+A signed-in user can attach one image to a new entry.
+A signed-in user can attach one image to an existing entry.
+An entry cannot contain more than one image.
+JPEG, JPG, PNG and WebP files are accepted.
+Unsupported file types are rejected before upload.
+Files larger than 10 MB are rejected.
+Supported files are processed to 1 MB or smaller before storage.
+Processed images retain the correct orientation.
+Processed images preserve their aspect ratio.
+Images are not enlarged unnecessarily.
+Location and unnecessary EXIF metadata are removed.
+The image appears above the written entry.
+Image placement is consistent in the editor, calendar history and Journal Library.
+A user can replace an attached image.
+The original image remains available if its replacement fails.
+A user can remove an image without deleting or altering the entry.
+A failed image upload does not remove or overwrite journal text.
+Interrupted or repeated upload attempts do not create duplicate attachments.
+Free users can store up to exactly 10 images.
+A free user with nine images can upload one additional image.
+A free user with 10 images cannot upload an eleventh image.
+Deleting an image frees one free-plan image slot.
+Replacing an image does not permanently consume an additional slot.
+Failed uploads do not consume free-plan image slots.
+Reaching the free limit does not affect writing, editing or saving entries.
+Existing images remain accessible after the free limit is reached.
+Premium users can attach one image to every entry.
+Images are stored in a private bucket.
+Users cannot retrieve another user’s images.
+Storage paths are not publicly enumerable.
+Signed image access expires as configured.
+Deleting an entry removes its associated stored image.
+Deleting an account removes every image owned by that user.
+Removed and replaced images do not remain as untracked storage objects.
+Image contents, filenames and URLs do not appear in analytics.
+Images are not sent to an AI provider.
+Existing rich-text, autosave, search, export and entry-editing functionality continues working.
+The media data structure is compatible with future Monthly Chapter and Annual Book rendering.
+Automated tests cover file validation, size limits, compression, free-plan limits, replacement, deletion and authorisation.
+Production testing confirms uploads on supported desktop and mobile browsers.
+Validation metrics
+
+These metrics evaluate whether photographs improve the product. They are not release blockers.
+
+Adoption
+
+Track:
+
+Percentage of activated users who upload at least one image
+Percentage of entries containing an image
+Average number of stored images per active user
+Percentage of free users who reach the 10-image limit
+Percentage of Premium users who continue uploading images
+
+Initial targets:
+
+At least 20% of activated users upload one image within their first seven days.
+At least 15% of saved entries contain an image.
+At least 10% of active free users reach five stored images within 30 days.
+Reliability
+
+Track:
+
+Image-processing success rate
+Image-upload success rate
+Median processing time
+Median upload time
+Failure rate by file type, file size and device category
+Orphaned-file rate
+
+Initial targets:
+
+At least 98% upload success for valid supported files.
+At least 99% processing success for valid supported files under 10 MB.
+Median browser processing time below 3 seconds on supported devices.
+Median upload time below 5 seconds on a normal mobile connection.
+Fewer than 0.1% orphaned media records or stored objects.
+Zero confirmed cross-user media-access incidents.
+Product impact
+
+Compare users who upload at least one image with users who do not.
+
+Measure:
+
+Day 2 return rate
+Day 7 return rate
+Writing days within the first 30 days
+Monthly Chapter eligibility rate
+Premium conversion
+Printed-book interest
+
+Initial directional targets:
+
+Photo users show a higher Day 7 return rate than non-photo users.
+Photo users record more writing days during their first 30 days.
+At least 20% of users reaching the 10-image limit open the Premium offer.
+At least 5% of users reaching the 10-image limit begin a Premium checkout once payments exist.
+Chapter previews containing photographs receive stronger user-reported value than text-only previews.
+Qualitative validation
+
+During beta interviews or feedback collection, confirm whether users:
+
+Understand that only one image is allowed per entry.
+Understand that photographs appear at the top.
+Find one image sufficient for preserving the day.
+Trust that their photographs remain private.
+Understand that images are not analysed by AI.
+Consider photographs important to the value of their future book.
+Want additional photographs strongly enough to justify expanding beyond one image per entry.
+
+Do not expand to three images per entry unless repeated real-user feedback demonstrates that one photograph is materially insufficient.
+
 # Addendum: Build 3.4 — Monthly Chapters and Annual Digital Books
 
 ## Purpose
