@@ -15,7 +15,7 @@ test("formats and restores an anonymous entry without changing its word count", 
   const editor = page.getByLabel("Your entry for today");
   await expect(editor).toBeEnabled();
   await editor.fill("A bright ordinary day");
-  await expect(page.getByText("4 / 100 words")).toBeVisible();
+  await expect(page.getByText("4 words preserved")).toBeVisible();
 
   await editor.press(SELECT_ALL);
   await page.getByRole("button", { name: "Bold" }).click();
@@ -50,11 +50,11 @@ test("formats and restores an anonymous entry without changing its word count", 
   await expect(about.getByText("Coming later", { exact: true })).toHaveCount(0);
   await expect(about.getByText("How it works", { exact: true })).toBeVisible();
   await expect(about.getByRole("heading", { name: "Start with today." })).toBeVisible();
-  await expect(about).toContainText("Your draft saves as you write.");
-  await expect(about).toContainText("Come back tomorrow and write another page.");
+  await expect(about).toContainText("Your draft saves as you write, whatever its length.");
+  await expect(about).toContainText("Return whenever you are ready and preserve another memory.");
   await expect(about.getByText("About your books", { exact: true })).toBeVisible();
-  await expect(about).toContainText("at least 10 daily entries of 100 words or more");
-  await expect(about).toContainText("do not generate a monthly chapter");
+  await expect(about).toContainText("at least 10 distinct days, regardless of entry length");
+  await expect(about).toContainText("fewer than 10 writing days remain safely in your journal");
   await expect(about).toContainText("365 days beginning with your first saved entry");
   await expect(about.getByText("Target: end Q2 2027", { exact: true })).toBeVisible();
   await expect(about.getByText("Target: end Q4 2027", { exact: true })).toBeVisible();
@@ -151,7 +151,7 @@ test("preserves one selection through every inline, typography, palette, and ali
     /background-color: rgb\(220, 233, 245\)/,
   );
   await expect(page.getByLabel("Font size")).toHaveValue("1.2em");
-  await expect(page.getByText("3 / 100 words")).toBeVisible();
+  await expect(page.getByText("3 words preserved")).toBeVisible();
 });
 
 test("applies every block, list, indentation, alignment, and clear-formatting command", async ({ page }) => {
@@ -186,7 +186,7 @@ test("applies every block, list, indentation, alignment, and clear-formatting co
   await expect(editor.locator("p")).toHaveText("Structure me");
   await expect(editor.locator("ul, ol, strong, a")).toHaveCount(0);
   await expect(editor.locator("p")).not.toHaveAttribute("style", /text-align/);
-  await expect(page.getByText("2 / 100 words")).toBeVisible();
+  await expect(page.getByText("2 words preserved")).toBeVisible();
 });
 
 test("requires selected text for safe links and restores linked content", async ({ page }) => {
@@ -208,7 +208,7 @@ test("requires selected text for safe links and restores linked content", async 
   await linkDialog.getByLabel("Web address").fill("example.com");
   await linkDialog.getByRole("button", { name: "Add link" }).click();
   await expect(editor.locator("a")).toHaveAttribute("href", "https://example.com");
-  await expect(page.getByText("2 / 100 words")).toBeVisible();
+  await expect(page.getByText("2 words preserved")).toBeVisible();
   await expect(page.getByText("Saved on this device", { exact: true })).toBeVisible();
 
   await page.reload();
@@ -248,7 +248,7 @@ test("inserts emoji at the saved caret and supports collapsed formatting with un
   await page.getByRole("button", { name: "Insert emoji" }).click();
   await page.getByRole("button", { name: "grinning face", exact: true }).click();
   await expect(editor).toHaveText("hello😀 world");
-  await expect(page.getByText("2 / 100 words")).toBeVisible();
+  await expect(page.getByText("2 words preserved")).toBeVisible();
 
   await editor.press("End");
   await page.getByRole("button", { name: "Bold" }).click();
@@ -284,5 +284,5 @@ test("applies advanced mobile formatting and returns focus to the editor", async
   const text = editor.locator("[data-lexical-text=true]");
   await expect(text).toHaveAttribute("style", /font-family: var\(--font-newsreader\)/);
   await expect(text).toHaveAttribute("style", /color: rgb\(48, 79, 115\)/);
-  await expect(page.getByText("2 / 100 words")).toBeVisible();
+  await expect(page.getByText("2 words preserved")).toBeVisible();
 });

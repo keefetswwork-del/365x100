@@ -12,23 +12,28 @@ with users as (
 entry_metrics as (
   select
     count(*) filter (
-      where e.word_count > 0
+      where public.entry_has_visible_content(e.content)
         and e.entry_date between u.local_today - 6 and u.local_today
     ) as entries_7_days,
     count(distinct e.user_id) filter (
-      where e.word_count > 0
+      where public.entry_has_visible_content(e.content)
         and e.entry_date between u.local_today - 6 and u.local_today
     ) as active_writers_7_days,
     count(*) filter (
-      where e.word_count > 0
+      where public.entry_has_visible_content(e.content)
         and e.entry_date between u.local_today - 29 and u.local_today
     ) as entries_30_days,
     count(*) filter (
       where e.word_count >= 100
         and e.entry_date between u.local_today - 29 and u.local_today
     ) as completed_entries_30_days,
+    count(*) filter (
+      where public.entry_has_visible_content(e.content)
+        and e.word_count < 100
+        and e.entry_date between u.local_today - 29 and u.local_today
+    ) as short_entries_30_days,
     count(distinct e.user_id) filter (
-      where e.word_count > 0
+      where public.entry_has_visible_content(e.content)
         and e.entry_date between u.local_today - 29 and u.local_today
     ) as active_writers_30_days,
     count(distinct e.user_id) filter (
@@ -55,10 +60,15 @@ select
   em.completed_writers_30_days,
   em.entries_30_days,
   em.completed_entries_30_days,
+  em.short_entries_30_days,
   em.words_30_days,
   round(
     100.0 * em.completed_entries_30_days / nullif(em.entries_30_days, 0),
     1
-  ) as writing_completion_percent
+  ) as writing_completion_percent,
+  round(
+    100.0 * em.short_entries_30_days / nullif(em.entries_30_days, 0),
+    1
+  ) as short_entry_percent
 from user_metrics um
 cross join entry_metrics em;

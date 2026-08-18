@@ -23,6 +23,7 @@ If Custom Reports is unavailable in the current dashboard, run the private snipp
 | `founder_operational_health.sql` | `Founder - Operational Health` | Table or headline values |
 | `founder_writing_year_progress.sql` | `Founder - Writing Years` | Private table |
 | `founder_system_health.sql` | `Founder - System Health` | Table or grouped chart |
+| `founder_writing_rhythm.sql` | `Founder - Writing Rhythm` | Table or grouped chart |
 
 The report is manually refreshed. It does not send email reports or alter application data.
 

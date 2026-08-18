@@ -149,8 +149,8 @@ test("configures return habits, persists prompts, and safely edits past entries"
 
     await page.reload();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(refreshedPrompt ?? "");
-    await expect(page.getByText("1-day streak", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "1-day streak" })).toHaveCount(0);
+    await expect(page.getByText("You wrote on 2 of the last 7 days", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /You wrote on/ })).toHaveCount(0);
 
     const mobileViewport = page.viewportSize();
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -189,16 +189,22 @@ test("configures return habits, persists prompts, and safely edits past entries"
     const dateTrigger = page.getByRole("button", { name: /^Open calendar for / });
     await dateTrigger.click();
     const progress = page.getByRole("dialog", { name: "A record of showing up." });
+    await progress.getByRole("textbox", { name: "Write an earlier memory" }).fill(yesterday);
+    await progress.getByRole("button", { name: "Continue" }).click();
+    const existingEntry = progress.getByRole("group", { name: "Existing entry found" });
+    await expect(existingEntry.getByRole("button", { name: "Open existing entry" })).toBeVisible();
+    await existingEntry.getByRole("button", { name: "Cancel" }).click();
+    await expect(existingEntry).toBeHidden();
     await expect(progress.getByText("2", { exact: true }).first()).toBeVisible();
     await progress.getByRole("tab", { name: "Progress" }).click();
     await expect(progress.getByRole("heading", { name: /Day \d+ of 365/ })).toBeVisible();
     await expect(progress.getByText("Calendar year", { exact: true })).toBeVisible();
     await progress.getByRole("tab", { name: "Calendar" }).click();
-    const selectedToday = progress.getByRole("button", { name: `${today}: empty` });
+    const selectedToday = progress.getByRole("button", { name: `${today}: No memory yet` });
     await expect(selectedToday).toHaveAttribute("aria-pressed", "true");
     await selectedToday.focus();
     await selectedToday.press("ArrowLeft");
-    await expect(progress.getByRole("button", { name: `${yesterday}: complete, 100 words` })).toBeFocused();
+    await expect(progress.getByRole("button", { name: `${yesterday}: 100-word goal reached, 100 words` })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(progress).toBeHidden();
     await expect(dateTrigger).toBeFocused();
@@ -206,7 +212,7 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await dateTrigger.click();
 
     await context.setOffline(true);
-    await progress.getByRole("button", { name: `${threeDaysAgo}: complete, 100 words` }).click();
+    await progress.getByRole("button", { name: `${threeDaysAgo}: 100-word goal reached, 100 words` }).click();
     await expect(page.getByText("This entry is not available offline.")).toBeVisible();
     await context.setOffline(false);
     await page.locator("#editor").getByRole("button", { name: "Return to today" }).click();
@@ -224,23 +230,26 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await expect(page.getByRole("button", { name: "Next day" })).toBeDisabled();
 
     await dateTrigger.click();
-    await progress.getByRole("button", { name: `${twoDaysAgo}: missed` }).click();
+    await progress.getByRole("button", { name: `${twoDaysAgo}: No memory yet` }).click();
     await expect(pastEditor).toBeFocused();
     await expect(pastEditor).toHaveText("");
-    const backfill = Array.from({ length: 100 }, (_, index) => `memory${index + 1}`).join(" ");
+    const backfill = "🌱 !";
     await pastEditor.fill(backfill);
+    await expect(page.getByText("0 words preserved")).toBeVisible();
     await expect(page.getByText(/Saving locally|Saving to cloud/)).toBeVisible();
     await expect(page.getByText("Saved to cloud", { exact: true })).toBeVisible();
-    await expect(page.getByText("3-day streak", { exact: true })).toBeVisible();
+    await expect(page.getByText("You wrote on 3 of the last 7 days", { exact: true })).toBeVisible();
 
     await dateTrigger.click();
-    await progress.getByRole("button", { name: `${threeDaysAgo}: complete, 100 words` }).click();
+    await expect(progress.getByRole("button", { name: `${twoDaysAgo}: Memory saved` })).toBeVisible();
+    await progress.getByRole("button", { name: `${threeDaysAgo}: 100-word goal reached, 100 words` }).click();
     await expect(page.getByRole("button", { name: "Previous day" })).toBeDisabled();
     await page.getByRole("button", { name: "Return to today" }).first().click();
 
     await page.getByLabel("Writing navigation").getByRole("button", { name: "Library" }).click();
     library = page.getByRole("dialog", { name: "A record of showing up." });
     await expect(library.getByText("An uncached earlier entry.")).toBeVisible();
+    await expect(library.getByRole("button", { name: new RegExp(`${historyDate(twoDaysAgo)} Memory saved`) })).toBeVisible();
     const allDownloadPromise = page.waitForEvent("download");
     await library.getByRole("button", { name: "Export all as text" }).click();
     const allDownload = await allDownloadPromise;
@@ -285,7 +294,7 @@ test("configures return habits, persists prompts, and safely edits past entries"
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(page.getByLabel("Writing navigation")).toBeHidden();
     await expect(page.getByRole("button", { name: /^Open calendar for / })).toBeVisible();
-    await expect(page.getByRole("button", { name: /day streak/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /You wrote on/ })).toHaveCount(0);
   } finally {
     if (userId) await admin.auth.admin.deleteUser(userId).catch(() => undefined);
   }

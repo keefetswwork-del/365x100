@@ -391,13 +391,18 @@ export type Database = {
           delivery_id: string
           email: string
           month_completed: number
+          month_writing_days: number
           month_words: number
+          most_recent_writing_date: string | null
           period_end: string
           period_start: string
+          personal_year_words: number
+          personal_year_writing_days: number
           review_date: string
           timezone: string
           user_id: string
           week_completed: number
+          week_writing_days: number
           week_words: number
           year_completed: number
           year_words: number
@@ -407,6 +412,7 @@ export type Database = {
         Args: { p_entry_date: string; p_user_id: string }
         Returns: string
       }
+      entry_has_visible_content: { Args: { p_content: string }; Returns: boolean }
       finish_weekly_review: {
         Args: {
           p_delivery_id: string

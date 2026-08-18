@@ -12,26 +12,35 @@ export interface HabitPreferences {
 export interface CalendarDay {
   completed: boolean;
   entryDate: string;
+  hasWriting: boolean;
   wordCount: number;
 }
 
 export interface HabitSummary {
   calendar: CalendarDay[];
   currentStreak: number;
+  daysSinceLastWriting: number;
   firstEntryDate: string | null;
+  lastSevenWritingDays: number;
   lastCompletedDate: string | null;
   lastWelcomeBackDate: string | null;
   longestStreak: number;
   missedDays: number;
+  monthlyChapterDaysRemaining: number;
+  monthlyChapterEligible: boolean;
   monthCompletedDays: number;
   monthElapsedDays: number;
+  monthWritingDays: number;
   monthWords: number;
+  mostRecentWritingDate: string | null;
   today: string;
   totalCompletedDays: number;
+  totalWritingDays: number;
   totalWords: number;
   visibleMonth: string;
   yearCompletedDays: number;
   yearElapsedDays: number;
+  yearWritingDays: number;
   yearWords: number;
 }
 
@@ -48,15 +57,15 @@ export type ProductEventName =
   | "signup_started"
   | "signup_completed"
   | "returned_next_day"
-  | "seven_days_completed";
+  | "seven_days_completed"
+  | "writing_rhythm_viewed";
 
 export type CalendarDayState =
   | "before-start"
-  | "complete"
-  | "empty"
   | "future"
-  | "missed"
-  | "started";
+  | "goal"
+  | "open"
+  | "written";
 
 export interface CalendarGridDay {
   date: string;

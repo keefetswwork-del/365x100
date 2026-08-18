@@ -55,15 +55,15 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   ).join(" ");
 
   await editor.fill(firstNinetyNineWords);
-  await expect(page.getByText("99 / 100 words")).toBeVisible();
+  await expect(page.getByText("99 words preserved")).toBeVisible();
   await expect(page.getByText("Saving locally…")).toBeVisible();
 
   const completedEntry = `${firstNinetyNineWords} finished`;
   await editor.fill(completedEntry);
 
-  await expect(page.getByText("100 / 100 words")).toBeVisible();
+  await expect(page.getByText("100 words preserved", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Today is complete." }),
+    page.getByRole("heading", { name: "100 words preserved." }),
   ).toBeVisible();
   await expect(page.getByText("Saved on this device", { exact: true })).toBeVisible();
 
@@ -83,7 +83,7 @@ test("completes and restores the anonymous writing flow", async ({ page }) => {
   await page.reload();
   await expect(editor).toHaveText(completedEntry);
   await expect(
-    page.getByRole("heading", { name: "Today is complete." }),
+    page.getByRole("heading", { name: "100 words preserved." }),
   ).toBeVisible();
 
   await page

@@ -5,6 +5,8 @@ export type WritingYearSummary =
     }
   | {
       completedDays: number;
+      annualBookDaysRemaining: number;
+      annualBookEligible: boolean;
       dayNumber: number;
       endDate: string;
       hasWritingYear: true;
@@ -12,6 +14,7 @@ export type WritingYearSummary =
       today: string;
       totalEntries: number;
       totalWords: number;
+      writingDays: number;
       yearNumber: number;
     };
 

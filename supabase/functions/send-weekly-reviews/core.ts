@@ -3,9 +3,14 @@ export interface WeeklyReviewClaim {
   email: string;
   current_streak: number;
   week_completed: number;
+  week_writing_days: number;
   week_words: number;
   month_completed: number;
+  month_writing_days: number;
   month_words: number;
+  most_recent_writing_date: string | null;
+  personal_year_words: number;
+  personal_year_writing_days: number;
   year_completed: number;
   year_words: number;
 }
@@ -32,19 +37,21 @@ function safeEqual(left: string, right: string): boolean {
 
 function reviewHtml(claim: WeeklyReviewClaim, siteUrl: string): string {
   const url = siteUrl.replace(/\/$/, "");
-  return `<!doctype html><html lang="en"><body style="margin:0;background:#f5f0e6;color:#18332e;font-family:Arial,sans-serif"><main style="max-width:560px;margin:0 auto;padding:40px 24px"><p style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#aa3f2e">365 × 100</p><h1 style="font-family:Georgia,serif;font-size:36px;line-height:1.1;margin:12px 0">Your week in writing</h1><p style="font-size:16px;line-height:1.6">You completed <strong>${claim.week_completed}</strong> writing days and wrote <strong>${claim.week_words}</strong> words over the last seven days.</p><div style="margin:24px 0;padding:20px;border:1px solid rgba(24,51,46,.15);border-radius:16px;background:#fffaf1"><p style="margin:0 0 8px"><strong>Current streak:</strong> ${claim.current_streak} days</p><p style="margin:0 0 8px"><strong>This month:</strong> ${claim.month_completed} completed days · ${claim.month_words} words</p><p style="margin:0"><strong>This year:</strong> ${claim.year_completed} completed days · ${claim.year_words} words</p></div><a href="${url}" style="display:inline-block;border-radius:999px;background:#18332e;color:white;padding:13px 20px;text-decoration:none;font-weight:700">Write today</a><p style="margin-top:28px;font-size:13px;line-height:1.5;color:#6c756e">This review contains writing statistics only, never your journal text. Change or disable weekly reviews from Account.</p></main></body></html>`;
+  const recent = claim.most_recent_writing_date ?? "Your first memory awaits";
+  return `<!doctype html><html lang="en"><body style="margin:0;background:#f5f0e6;color:#18332e;font-family:Arial,sans-serif"><main style="max-width:560px;margin:0 auto;padding:40px 24px"><p style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#aa3f2e">365x100</p><h1 style="font-family:Georgia,serif;font-size:36px;line-height:1.1;margin:12px 0">Your week in writing</h1><p style="font-size:16px;line-height:1.6">You preserved memories on <strong>${claim.week_writing_days}</strong> of the last seven days and wrote <strong>${claim.week_words}</strong> words.</p><div style="margin:24px 0;padding:20px;border:1px solid rgba(24,51,46,.15);border-radius:16px;background:#fffaf1"><p style="margin:0 0 8px"><strong>This month:</strong> ${claim.month_writing_days} writing days · ${claim.month_words} words</p><p style="margin:0 0 8px"><strong>Your Personal Year:</strong> ${claim.personal_year_writing_days} writing days · ${claim.personal_year_words} words</p><p style="margin:0"><strong>Most recent memory:</strong> ${recent}</p></div><p style="font-size:15px;line-height:1.6">There is nothing to catch up on. Your story is still here whenever you are ready.</p><a href="${url}" style="display:inline-block;border-radius:999px;background:#18332e;color:white;padding:13px 20px;text-decoration:none;font-weight:700">Preserve a memory</a><p style="margin-top:28px;font-size:13px;line-height:1.5;color:#6c756e">This review contains writing statistics only, never your journal text. Change or disable weekly reviews from Account.</p></main></body></html>`;
 }
 
 function reviewText(claim: WeeklyReviewClaim, siteUrl: string): string {
   return [
     "Your week in 365x100",
     "",
-    `Last seven days: ${claim.week_completed} completed days and ${claim.week_words} words.`,
-    `Current streak: ${claim.current_streak} days.`,
-    `This month: ${claim.month_completed} completed days and ${claim.month_words} words.`,
-    `This year: ${claim.year_completed} completed days and ${claim.year_words} words.`,
+    `Last seven days: ${claim.week_writing_days} writing days and ${claim.week_words} words preserved.`,
+    `This month: ${claim.month_writing_days} writing days and ${claim.month_words} words.`,
+    `Your Personal Year: ${claim.personal_year_writing_days} writing days and ${claim.personal_year_words} words.`,
+    `Most recent memory: ${claim.most_recent_writing_date ?? "Your first memory awaits"}.`,
+    "There is nothing to catch up on. Your story is still here whenever you are ready.",
     "",
-    `Write today: ${siteUrl.replace(/\/$/, "")}`,
+    `Preserve a memory: ${siteUrl.replace(/\/$/, "")}`,
     "",
     "This review contains writing statistics only, never your journal text.",
   ].join("\n");
@@ -119,7 +126,7 @@ export function createWeeklyReviewHandler(
             from: "365x100 <hello@mail.365x100.com>",
             reply_to: "hello@365x100.com",
             to: [claim.email],
-            subject: `Your week in writing: ${claim.week_completed} completed days`,
+            subject: `Your week in writing: ${claim.week_writing_days} writing days`,
             html: reviewHtml(claim, environment.siteUrl),
             text: reviewText(claim, environment.siteUrl),
           }),

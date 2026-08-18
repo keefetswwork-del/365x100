@@ -44,8 +44,8 @@ export function ProductStoryPanel({ onClose, open }: ProductStoryPanelProps) {
           <p className="text-xs font-bold uppercase tracking-[0.17em] text-[var(--accent-dark)]">How it works</p>
           <h3 id="how-it-works-title" className="mt-2 font-serif text-3xl tracking-[-0.03em]">Start with today.</h3>
           <div className="mt-4 space-y-4 text-sm leading-7 text-[var(--muted)] sm:text-base">
-            <p>Write about what happened, what mattered, or whatever is on your mind. Your draft saves as you write. Reach 100 words to complete the day - or keep going if you have more to say.</p>
-            <p>Come back tomorrow and write another page. Over time, those ordinary pages become a record of your month and, eventually, the story of your year.</p>
+            <p>Write about what happened, what mattered, or whatever is on your mind. Your draft saves as you write, whatever its length. One hundred words is a gentle goal, and you can keep going whenever you have more to say.</p>
+            <p>Return whenever you are ready and preserve another memory. Over time, those ordinary pages become a record of your month and, eventually, the story of your Personal Year.</p>
           </div>
         </section>
 
@@ -59,8 +59,8 @@ export function ProductStoryPanel({ onClose, open }: ProductStoryPanelProps) {
                 <p className="mt-2 inline-flex rounded-full border border-[var(--line)] px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Target: end Q2 2027</p>
               </div>
               <div className="space-y-3 text-sm leading-7 text-[var(--muted)] sm:text-base">
-                <p>Monthly digital chapters are in development. At the end of each calendar month, a chapter will be created when you have completed at least 10 daily entries of 100 words or more.</p>
-                <p>Months with fewer than 10 completed entries remain in your journal but do not generate a monthly chapter.</p>
+                <p>Monthly digital chapters are in development. A calendar month qualifies after you preserve memories on at least 10 distinct days, regardless of entry length.</p>
+                <p>Months with fewer than 10 writing days remain safely in your journal. Chapter generation will arrive in a future release.</p>
               </div>
             </article>
             <article className="grid gap-3 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6">
@@ -68,7 +68,7 @@ export function ProductStoryPanel({ onClose, open }: ProductStoryPanelProps) {
                 <h4 className="font-bold">Annual</h4>
                 <p className="mt-2 inline-flex rounded-full border border-[var(--line)] px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Target: end Q4 2027</p>
               </div>
-              <p className="text-sm leading-7 text-[var(--muted)] sm:text-base">Your annual book will follow your personal writing year: 365 days beginning with your first saved entry, rather than January to December.</p>
+              <p className="text-sm leading-7 text-[var(--muted)] sm:text-base">Your annual book will follow your Personal Year: 365 days beginning with your first saved entry, rather than January to December. Sixty writing days will qualify that year for future book generation after Day 365 ends.</p>
             </article>
           </div>
         </section>

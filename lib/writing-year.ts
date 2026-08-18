@@ -68,6 +68,8 @@ export function parseWritingYearSummary(value: Json): WritingYearSummary {
   }
 
   return {
+    annualBookDaysRemaining: requiredNumber(value.annualBookDaysRemaining, "annual book days remaining"),
+    annualBookEligible: value.annualBookEligible === true,
     completedDays: requiredNumber(value.completedDays, "completed days"),
     dayNumber: requiredNumber(value.dayNumber, "day number"),
     endDate: value.endDate,
@@ -76,6 +78,7 @@ export function parseWritingYearSummary(value: Json): WritingYearSummary {
     today: value.today,
     totalEntries: requiredNumber(value.totalEntries, "entry total"),
     totalWords: requiredNumber(value.totalWords, "word total"),
+    writingDays: requiredNumber(value.writingDays, "writing days"),
     yearNumber: requiredNumber(value.yearNumber, "number"),
   };
 }

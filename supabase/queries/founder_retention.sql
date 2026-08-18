@@ -4,7 +4,7 @@
 with writer_facts as (
   select
     u.id,
-    min(e.entry_date) filter (where e.word_count > 0) as first_entry_date,
+    min(e.entry_date) filter (where public.entry_has_visible_content(e.content)) as first_entry_date,
     count(*) filter (where e.word_count >= 100) as completed_days
   from auth.users u
   left join public.entries e on e.user_id = u.id
@@ -21,7 +21,7 @@ activated as (
       from public.entries next_entry
       where next_entry.user_id = f.id
         and next_entry.entry_date = f.first_entry_date + 1
-        and next_entry.word_count > 0
+        and public.entry_has_visible_content(next_entry.content)
     ) as returned_next_calendar_day
   from writer_facts f
   where f.first_entry_date is not null

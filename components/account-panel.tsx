@@ -136,7 +136,7 @@ export function AccountPanel({
             <label className="text-sm font-bold">Review day<select value={weeklyReviewDay} disabled={!weeklyReviewEnabled} onChange={(event) => setWeeklyReviewDay(Number(event.target.value))} className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"><option value={1}>Monday</option><option value={2}>Tuesday</option><option value={3}>Wednesday</option><option value={4}>Thursday</option><option value={5}>Friday</option><option value={6}>Saturday</option><option value={7}>Sunday</option></select></label>
             <label className="text-sm font-bold">Review time<input type="time" value={weeklyReviewTime} disabled={!weeklyReviewEnabled} onChange={(event) => setWeeklyReviewTime(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50" /></label>
           </div>
-          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Weekly reviews include counts and streaks only, never journal text.</p>
+          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Weekly reviews include writing-day and word totals only, never journal text.</p>
           <button type="submit" disabled={isWorking} className="mt-4 rounded-full bg-[var(--ink)] px-5 py-2.5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">Save writing rhythm</button>
         </form>
 

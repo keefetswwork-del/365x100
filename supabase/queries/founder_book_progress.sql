@@ -28,8 +28,8 @@ period_metrics as (
     p.period_type,
     p.period_start,
     p.period_end,
-    count(distinct e.user_id) filter (where e.word_count > 0) as active_writers,
-    count(*) filter (where e.word_count > 0) as total_entries,
+    count(distinct e.user_id) filter (where public.entry_has_visible_content(e.content)) as active_writers,
+    count(*) filter (where public.entry_has_visible_content(e.content)) as total_entries,
     count(*) filter (where e.word_count >= 100) as completed_days,
     coalesce(sum(e.word_count), 0) as total_words
   from periods p

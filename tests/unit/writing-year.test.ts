@@ -51,6 +51,8 @@ test("parses empty and active writing-year dashboard responses", () => {
   })).toEqual({ hasWritingYear: false, today: "2026-08-17" });
 
   expect(parseWritingYearSummary({
+    annualBookDaysRemaining: 50,
+    annualBookEligible: false,
     completedDays: 10,
     dayNumber: 20,
     endDate: "2027-08-16",
@@ -59,8 +61,9 @@ test("parses empty and active writing-year dashboard responses", () => {
     today: "2026-09-05",
     totalEntries: 12,
     totalWords: 1400,
+    writingDays: 10,
     yearNumber: 1,
-  })).toMatchObject({ completedDays: 10, dayNumber: 20, totalEntries: 12 });
+  })).toMatchObject({ annualBookDaysRemaining: 50, completedDays: 10, dayNumber: 20, totalEntries: 12, writingDays: 10 });
 });
 
 test("rejects malformed writing-year responses and clamps progress", () => {

@@ -40,7 +40,7 @@ export function HabitOnboarding({ onSave }: HabitOnboardingProps) {
       <section aria-labelledby="habit-onboarding-title" aria-modal="true" role="dialog" className="w-full max-w-lg rounded-t-[2rem] bg-[var(--paper)] p-6 shadow-2xl sm:rounded-[2rem] sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">A gentle weekly rhythm</p>
         <h2 id="habit-onboarding-title" className="mt-2 font-serif text-4xl tracking-[-0.04em]">See the week you wrote.</h2>
-        <p className="mt-4 text-sm leading-6 text-[var(--muted)]">An optional review can show your writing days, words, and streak. It never includes journal text.</p>
+        <p className="mt-4 text-sm leading-6 text-[var(--muted)]">An optional review can show your writing rhythm and words preserved. It never includes journal text.</p>
 
         <form onSubmit={submit} className="mt-6">
           <label className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-white/55 p-4 font-bold">

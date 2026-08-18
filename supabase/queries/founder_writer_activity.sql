@@ -8,9 +8,9 @@ with user_facts as (
     u.created_at as signup_at,
     p.timezone,
     coalesce((now() at time zone p.timezone)::date, current_date) as local_today,
-    min(e.entry_date) filter (where e.word_count > 0) as first_entry_date,
-    max(e.entry_date) filter (where e.word_count > 0) as latest_entry_date,
-    count(*) filter (where e.word_count > 0) as days_written,
+    min(e.entry_date) filter (where public.entry_has_visible_content(e.content)) as first_entry_date,
+    max(e.entry_date) filter (where public.entry_has_visible_content(e.content)) as latest_entry_date,
+    count(*) filter (where public.entry_has_visible_content(e.content)) as days_written,
     count(*) filter (where e.word_count >= 100) as completed_days,
     coalesce(sum(e.word_count), 0) as total_words
   from auth.users u

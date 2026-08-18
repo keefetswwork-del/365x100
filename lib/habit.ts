@@ -26,10 +26,12 @@ function parseCalendar(value: Json | undefined): CalendarDay[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (!isRecord(item) || typeof item.entryDate !== "string") return [];
+    const wordCount = numberValue(item.wordCount);
     return [{
       completed: item.completed === true,
       entryDate: item.entryDate,
-      wordCount: numberValue(item.wordCount),
+      hasWriting: item.hasWriting === true || wordCount > 0,
+      wordCount,
     }];
   });
 }
@@ -41,20 +43,28 @@ export function parseHabitSummary(value: Json): HabitSummary {
   return {
     calendar: parseCalendar(value.calendar),
     currentStreak: numberValue(value.currentStreak),
+    daysSinceLastWriting: numberValue(value.daysSinceLastWriting),
     firstEntryDate: stringOrNull(value.firstEntryDate),
+    lastSevenWritingDays: numberValue(value.lastSevenWritingDays),
     lastCompletedDate: stringOrNull(value.lastCompletedDate),
     lastWelcomeBackDate: stringOrNull(value.lastWelcomeBackDate),
     longestStreak: numberValue(value.longestStreak),
     missedDays: numberValue(value.missedDays),
+    monthlyChapterDaysRemaining: numberValue(value.monthlyChapterDaysRemaining),
+    monthlyChapterEligible: value.monthlyChapterEligible === true,
     monthCompletedDays: numberValue(value.monthCompletedDays),
     monthElapsedDays: numberValue(value.monthElapsedDays),
+    monthWritingDays: numberValue(value.monthWritingDays),
     monthWords: numberValue(value.monthWords),
+    mostRecentWritingDate: stringOrNull(value.mostRecentWritingDate),
     today: value.today,
     totalCompletedDays: numberValue(value.totalCompletedDays),
+    totalWritingDays: numberValue(value.totalWritingDays),
     totalWords: numberValue(value.totalWords),
     visibleMonth: value.visibleMonth,
     yearCompletedDays: numberValue(value.yearCompletedDays),
     yearElapsedDays: numberValue(value.yearElapsedDays),
+    yearWritingDays: numberValue(value.yearWritingDays),
     yearWords: numberValue(value.yearWords),
   };
 }
@@ -121,8 +131,8 @@ export function shiftDate(date: string, offset: number): string {
   return `${shifted.getUTCFullYear().toString().padStart(4, "0")}-${(shifted.getUTCMonth() + 1).toString().padStart(2, "0")}-${shifted.getUTCDate().toString().padStart(2, "0")}`;
 }
 
-export function formatStreakLabel(streak: number): string {
-  return streak > 0 ? `${streak}-day streak` : "Your streak starts today";
+export function formatRhythmLabel(writingDays: number): string {
+  return `You wrote on ${writingDays} of the last 7 days`;
 }
 
 export function formatMonth(month: string): string {
@@ -145,12 +155,11 @@ export function buildCalendarGrid(summary: HabitSummary): CalendarGridDay[] {
     const entry = entries.get(date);
     const beforeStart = Boolean(summary.firstEntryDate && date < summary.firstEntryDate);
     const future = date > summary.today;
-    let state: CalendarGridDay["state"] = "empty";
+    let state: CalendarGridDay["state"] = "open";
     if (future) state = "future";
     else if (beforeStart) state = "before-start";
-    else if (entry?.completed) state = "complete";
-    else if (entry && entry.wordCount > 0) state = "started";
-    else if (date < summary.today && summary.firstEntryDate) state = "missed";
+    else if (entry?.completed) state = "goal";
+    else if (entry?.hasWriting) state = "written";
 
     return {
       date,
@@ -163,8 +172,8 @@ export function buildCalendarGrid(summary: HabitSummary): CalendarGridDay[] {
   });
 }
 
-export function missedDayMessage(missedDays: number): string | null {
-  if (missedDays >= 7) return "Welcome back. Your year is still here, and today can begin with one honest detail.";
-  if (missedDays >= 3) return "A few days have passed. Nothing is lost; this page is ready when you are.";
+export function returnMessage(daysSinceWriting: number): string | null {
+  if (daysSinceWriting >= 7) return "Welcome back. Your story is still here whenever you’re ready.";
+  if (daysSinceWriting >= 3) return "Welcome back. What would you like to remember?";
   return null;
 }

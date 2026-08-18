@@ -20,8 +20,13 @@ const claim: WeeklyReviewClaim = {
   delivery_id: "00000000-0000-0000-0000-000000000001",
   email: "writer@example.com",
   month_completed: 8,
+  month_writing_days: 10,
   month_words: 1240,
+  most_recent_writing_date: "2026-08-17",
+  personal_year_words: 7210,
+  personal_year_writing_days: 48,
   week_completed: 4,
+  week_writing_days: 5,
   week_words: 630,
   year_completed: 48,
   year_words: 7210,
@@ -60,6 +65,8 @@ test("sends statistics with a stable idempotency key and no journal content", as
   const resend = calls.find((call) => call.url === environment.resendApiUrl)!;
   expect(resend.headers.get("Idempotency-Key")).toBe(`weekly-review/${claim.delivery_id}`);
   expect(resend.body).toContain("630");
+  expect(resend.body).toContain("5 writing days");
+  expect(resend.body).not.toContain("Current streak");
   expect(resend.body).not.toContain("content");
   expect(resend.body).not.toContain("journal entry");
   const finish = calls.find((call) => call.url.endsWith("finish_weekly_review"))!;

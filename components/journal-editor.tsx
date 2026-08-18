@@ -63,10 +63,10 @@ import { fetchEntryHistory } from "@/lib/history";
 import {
   fetchDailyPrompt,
   fetchHabitSummary,
-  formatStreakLabel,
+  formatRhythmLabel,
   markWelcomeBack,
-  missedDayMessage,
   monthStart,
+  returnMessage,
   saveHabitPreferences,
   shiftDate,
   shiftMonth,
@@ -881,7 +881,7 @@ export function JournalEditor() {
     const summary = habitSummaryRef.current;
     if (
       client && sessionRef.current && summary && localDateRef.current === todayDateRef.current &&
-      summary.missedDays >= 3 && summary.lastWelcomeBackDate !== summary.today
+      summary.daysSinceLastWriting >= 3 && summary.lastWelcomeBackDate !== summary.today
     ) {
       setWelcomeBackVisible(true);
       const updated = { ...summary, lastWelcomeBackDate: summary.today };
@@ -941,6 +941,15 @@ export function JournalEditor() {
       void refreshHabitDashboard();
     }
     setHabitOpen(true);
+  }
+
+  async function checkEntryExists(entryDate: string): Promise<boolean> {
+    if (!client || !session || !navigator.onLine) {
+      throw new Error("Cloud history is unavailable.");
+    }
+    const cached = loadCloudCache(session.user.id, entryDate);
+    if (cached) return true;
+    return Boolean(await fetchCloudEntry(client, entryDate));
   }
 
   function closeHabitDashboard() {
@@ -1224,7 +1233,7 @@ export function JournalEditor() {
   );
   const canNavigateNext = Boolean(todayDate && localDate < todayDate);
   const promptHeading = dailyPrompt?.body ?? (isToday ? "What happened today?" : "What happened on this day?");
-  const gapMessage = isToday && habitSummary ? missedDayMessage(habitSummary.missedDays) : null;
+  const gapMessage = isToday && habitSummary ? returnMessage(habitSummary.daysSinceLastWriting) : null;
   const habitPreferences = profile ? preferencesFromProfile(profile) : null;
   const exportBlockedReason = !online
     ? "Reconnect to create a complete export."
@@ -1265,7 +1274,7 @@ export function JournalEditor() {
           <section aria-label={signedIn ? "Entry date navigation" : "Entry date"} className="flex flex-col items-center pt-7 text-center sm:pt-9">
             {signedIn && (
               <p className="min-h-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]" aria-live="polite">
-                {habitSummary ? formatStreakLabel(habitSummary.currentStreak) : "Loading your streak…"}
+                {habitSummary ? formatRhythmLabel(habitSummary.lastSevenWritingDays) : "Loading your writing rhythm…"}
               </p>
             )}
             <div className={`${signedIn ? "mt-2" : ""} grid grid-cols-[2.75rem_minmax(0,auto)_2.75rem] items-center gap-1 sm:gap-3`}>
@@ -1303,7 +1312,7 @@ export function JournalEditor() {
                   {signedIn ? "Your words save here first, then safely sync to your account." : "One honest detail is enough to begin. This draft stays private in this browser."}
                 </p>
                 {gapMessage && !welcomeBackVisible && <p className="mt-5 max-w-md rounded-2xl border border-[var(--sage)]/45 bg-white/45 p-4 text-sm leading-6 text-[var(--ink)]">{gapMessage}</p>}
-                {welcomeBackVisible && <p className="mt-5 max-w-md rounded-2xl bg-[var(--sage)]/35 p-4 text-sm font-semibold leading-6 text-[var(--ink)]" role="status">Welcome back. Today counts because you returned, not because the gap disappeared.</p>}
+                {welcomeBackVisible && <p className="mt-5 max-w-md rounded-2xl bg-[var(--sage)]/35 p-4 text-sm font-semibold leading-6 text-[var(--ink)]" role="status">Welcome back. Your story is still here whenever you’re ready.</p>}
               </div>
               <p className="hidden max-w-xs border-l-2 border-[var(--sage)] pl-4 text-sm leading-6 text-[var(--muted)] lg:block">Write past one hundred if the day has more to say.</p>
             </section>
@@ -1327,8 +1336,8 @@ export function JournalEditor() {
                   />
                   <div id="entry-progress" className="mt-5 border-t border-[var(--line)] pt-5">
                     <div className="mb-3 flex items-baseline justify-between gap-4">
-                      <p className="text-sm font-bold tabular-nums text-[var(--ink)]" aria-live="polite">{wordCount} / {WORD_TARGET} words</p>
-                      <p className="text-xs font-semibold text-[var(--muted)]">{wordCount >= WORD_TARGET ? "Goal reached — keep writing" : `${WORD_TARGET - wordCount} to go`}</p>
+                      <p className="text-sm font-bold tabular-nums text-[var(--ink)]" aria-live="polite">{wordCount} {wordCount === 1 ? "word" : "words"} preserved</p>
+                      <p className="text-xs font-semibold text-[var(--muted)]">{wordCount >= WORD_TARGET ? "100-word goal reached — keep writing" : "Today’s gentle goal: 100 words"}</p>
                     </div>
                     <progress className="writing-progress block" max={WORD_TARGET} value={progress} aria-label={`${progress} of ${WORD_TARGET} word goal`} />
                   </div>
@@ -1342,8 +1351,8 @@ export function JournalEditor() {
               <div className="flex items-start gap-4">
                 <span className={`${isCelebrating ? "completion-mark" : ""} grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-xl font-bold`} aria-hidden="true">✓</span>
                 <div>
-                  <h2 id="completion-title" className="font-serif text-3xl leading-none tracking-[-0.03em]">{isToday ? "Today is complete." : "This day is complete."}</h2>
-                  <p className="mt-2 text-sm leading-6 text-white/65">You showed up. Today’s page is now part of the story your month and year are becoming.</p>
+                  <h2 id="completion-title" className="font-serif text-3xl leading-none tracking-[-0.03em]">100 words preserved.</h2>
+                  <p className="mt-2 text-sm leading-6 text-white/65">This memory is part of the story your month and Personal Year are becoming.</p>
                 </div>
               </div>
               <div className="mt-5 sm:mt-0 sm:text-right">
@@ -1368,7 +1377,7 @@ export function JournalEditor() {
       {session && <LegalConsentPanel errorMessage={legalAcceptanceError} open={legalAcceptanceRequired} onAccept={completeLegalAcceptance} onSignOut={signOut} />}
       {timezoneRequired && session && !legalAcceptanceRequired && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && !legalAcceptanceRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
+      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onCheckEntryExists={checkEntryExists} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onRhythmViewed={() => void recordProductEvent(client, "writing_rhythm_viewed", todayDateRef.current)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
       {profile && session && (
         <AccountPanel key={profile.userId} dataDownloadBlockedReason={exportBlockedReason} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onDownloadData={downloadPortableData} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}

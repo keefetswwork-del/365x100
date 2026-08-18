@@ -35,7 +35,7 @@ select
   end as day_of_365,
   y.start_date,
   y.end_date,
-  count(e.id) filter (where e.word_count > 0) as days_written,
+  count(e.id) filter (where public.entry_has_visible_content(e.content)) as days_written,
   count(e.id) filter (where e.word_count >= 100) as completed_days,
   coalesce(sum(e.word_count), 0) as total_words
 from current_years y
