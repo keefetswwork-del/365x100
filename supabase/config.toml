@@ -118,12 +118,6 @@ enabled = true
 file_size_limit = "50MiB"
 
 # Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
-
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
@@ -441,3 +435,15 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/send-weekly-reviews/deno.json"
 entrypoint = "./functions/send-weekly-reviews/index.ts"
+
+[functions.journal-media]
+enabled = true
+verify_jwt = true
+import_map = "./functions/journal-media/deno.json"
+entrypoint = "./functions/journal-media/index.ts"
+
+[functions.cleanup-journal-media]
+enabled = true
+verify_jwt = false
+import_map = "./functions/cleanup-journal-media/deno.json"
+entrypoint = "./functions/cleanup-journal-media/index.ts"

@@ -66,6 +66,11 @@ test("requires authentication and permanently deletes only the caller", async ()
   expect(createdB.user).not.toBeNull();
   const userA = createdA.user!;
   const userB = createdB.user!;
+  const entryA = crypto.randomUUID();
+  const entryB = crypto.randomUUID();
+  const mediaId = crypto.randomUUID();
+  const operationId = crypto.randomUUID();
+  const storagePath = `${userA.id}/${entryA}/${mediaId}.webp`;
 
   try {
     const { error: profileError } = await admin.from("profiles").insert([
@@ -73,11 +78,28 @@ test("requires authentication and permanently deletes only the caller", async ()
       { timezone: "UTC", user_id: userB.id },
     ]);
     const { error: entryError } = await admin.from("entries").insert([
-      { content: "caller entry", entry_date: "2026-08-16", user_id: userA.id, word_count: 2 },
-      { content: "other entry", entry_date: "2026-08-16", user_id: userB.id, word_count: 2 },
+      { content: "caller entry", entry_date: "2026-08-16", id: entryA, user_id: userA.id, word_count: 2 },
+      { content: "other entry", entry_date: "2026-08-16", id: entryB, user_id: userB.id, word_count: 2 },
     ]);
     expect(profileError).toBeNull();
     expect(entryError).toBeNull();
+    const stored = await admin.storage.from("journal-media").upload(
+      storagePath,
+      new Blob(["private-photo"], { type: "image/webp" }),
+      { contentType: "image/webp" },
+    );
+    expect(stored.error).toBeNull();
+    const mediaInsert = await admin.from("entry_media").insert({
+      byte_size: 13,
+      entry_id: entryA,
+      height: 1,
+      id: mediaId,
+      operation_id: operationId,
+      storage_path: storagePath,
+      user_id: userA.id,
+      width: 1,
+    });
+    expect(mediaInsert.error).toBeNull();
 
     const browserClient = createClient(apiUrl, publicKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -116,8 +138,12 @@ test("requires authentication and permanently deletes only the caller", async ()
 
     const callerProfiles = await admin.from("profiles").select("user_id").eq("user_id", userA.id);
     const callerEntries = await admin.from("entries").select("user_id").eq("user_id", userA.id);
+    const callerMedia = await admin.from("entry_media").select("user_id").eq("user_id", userA.id);
+    const callerPhoto = await admin.storage.from("journal-media").download(storagePath);
     expect(callerProfiles.data).toEqual([]);
     expect(callerEntries.data).toEqual([]);
+    expect(callerMedia.data).toEqual([]);
+    expect(callerPhoto.error).not.toBeNull();
   } finally {
     await admin.auth.admin.deleteUser(userA.id).catch(() => undefined);
     await admin.auth.admin.deleteUser(userB.id).catch(() => undefined);
