@@ -78,5 +78,7 @@ Vault values to Render or any `NEXT_PUBLIC_*` variable. Weekly emails contain on
 counts and streaks; they do not read or send entry content. Service-only KPI queries
 are documented in `supabase/queries/build_3_kpis.sql`.
 
-Build 3 excludes daily reminders, search, exports, generated books, payments, and
-PWA installation.
+Builds through 3.3 provide the writing experience, accounts, return-habit tools,
+rich editing, history, private search, exports, personal writing years, and beta
+operations. Daily reminders, generated books, payments, premium restrictions,
+printing, and PWA installation remain intentionally deferred.

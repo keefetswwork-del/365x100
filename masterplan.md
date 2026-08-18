@@ -64,6 +64,24 @@ At least 40% of new users return the following day.
 At least 20% complete seven separate writing days.
 
 Development phases
+
+Canonical implementation order
+
+The build-numbered roadmap below is the implementation source of truth. Earlier phase descriptions remain as product history where they do not conflict with this order:
+
+1. Build 1: Anonymous writing loop — delivered.
+2. Build 2: Accounts and cloud persistence — delivered.
+3. Build 3: Return habit — delivered.
+4. Build 3.1: Rich writing and product story — delivered.
+5. Build 3.2: History, search and export foundation — delivered.
+6. Build 3.3: Writing-Year Foundations and Beta Operations — delivered.
+7. Build 3.3.1: Life Story Without Streak Pressure — next.
+8. Build 3.4: Monthly Chapters and Annual Digital Books — planned.
+9. Build 4: Monetisation — planned.
+10. Build 5: Printed-book validation — planned.
+11. Build 6: Installable PWA — planned.
+12. Build 7: Validate before expanding — ongoing measurement after release.
+
 Phase 1: Core writing experience
 Build:
 Mobile-first landing page
@@ -122,6 +140,9 @@ At least 10% complete 30 writing days.
 Avoid harsh streak-loss messaging. Missing a day should not make the user feel that their entire year is ruined.
 
 Phase 4: History and monthly/annual output
+
+Status note: history, search and plain-text/data export were delivered by Build 3.2. Monthly chapters, annual-book preview and PDF generation are superseded by Build 3.4.
+
 Build:
 Previous-entry viewer
 Search
@@ -216,12 +237,11 @@ Recommended stack
 Next.js with App Router
 TypeScript
 Tailwind CSS
-Supabase later for authentication and storage
+Supabase for authentication, storage, database functions and scheduled Edge Functions
 Stripe Checkout later for payments
-Resend later for reminders
-Vercel for deployment
-Vitest for unit tests
-Playwright for critical user-flow tests
+Resend for authentication delivery and optional weekly reviews
+Render Static Site for the exported Next.js frontend
+Playwright for unit, Edge Function and critical user-flow tests
 
 Start with as few dependencies as possible.
 
@@ -781,6 +801,8 @@ Public or social journal sharing
 
 Chapter and book generation remain part of Build 3.4.
 
+Build 3.3.1 calculates and displays eligibility only. It does not generate, preview or export a Monthly Chapter or Annual Book. A Monthly Chapter qualifies at 10 visible-content writing days and is generated only after that calendar month ends in Build 3.4. An Annual Book qualifies at 60 visible-content writing days within a Personal Year and is generated only after Day 365 ends in Build 3.4.
+
 Success conditions
 
 Build 3.3.1 is complete when:
@@ -830,9 +852,9 @@ Build 3.4 covers digital generation only. Printed-book ordering, payments, AI su
 ## 1. Monthly chapter system
 
 - Treat each calendar month as a potential monthly chapter.
-- Count completed daily entries within that calendar month.
-- Require at least 10 completed daily entries for a monthly chapter to be created.
-- Do not count entries below 100 words toward monthly eligibility.
+- Count distinct visible-content writing days within that calendar month.
+- Require at least 10 writing days for a monthly chapter to be created.
+- Entry length does not affect monthly eligibility; whitespace-only drafts do not count.
 - Show progress toward eligibility during the month, such as:
   - 7 of 10 completed days
   - 3 more completed days needed
@@ -843,7 +865,7 @@ Build 3.4 covers digital generation only. Printed-book ordering, payments, AI su
   - Entry date
   - Entry title, when available
   - Rich-text entry content
-  - Number of completed writing days
+  - Number of writing days
 - Provide an in-app monthly chapter view.
 - Allow eligible monthly chapters to be exported in a portable digital format.
 - Clearly explain why a chapter was not created when the user completed fewer than 10 days.
@@ -858,6 +880,7 @@ Build 3.4 covers digital generation only. Printed-book ordering, payments, AI su
   - Day 1 is the date of the user’s first saved authenticated entry for that writing year.
   - Day 365 is 364 calendar days later.
 - Generate the annual book only after Day 365 has ended.
+- Require at least 60 visible-content writing days within the Personal Year.
 - Compile entries chronologically within the writing-year boundaries.
 - Organise the book into calendar-month sections.
 - Handle partial first and final calendar months correctly.
@@ -883,15 +906,16 @@ Build 3.4 covers digital generation only. Printed-book ordering, payments, AI su
 
 Build 3.4 is complete when:
 
-- A calendar month with nine or fewer completed entries does not produce a monthly chapter.
-- A calendar month with at least 10 completed entries produces a monthly chapter after the month ends.
-- The eligibility counter includes only entries containing at least 100 words.
+- A calendar month with nine or fewer writing days does not produce a monthly chapter.
+- A calendar month with at least 10 writing days produces a monthly chapter after the month ends.
+- The eligibility counter includes every visible-content entry regardless of word count and excludes whitespace-only drafts.
 - Monthly chapters contain the correct entries in chronological order.
 - Months containing the beginning or end of a writing year are handled correctly.
 - Users can see why an ineligible month did not generate a chapter.
 - Editing a past entry correctly updates eligibility and regenerates the affected chapter.
 - Monthly chapter formatting preserves dates, titles and supported rich text.
 - An annual book becomes available only after the user’s personal Day 365 has ended.
+- An annual book requires at least 60 writing days in that Personal Year; 59 writing days do not qualify.
 - The annual book contains only entries within the correct 365-day writing year.
 - Partial first and final months appear correctly.
 - Missed days do not create unnecessary blank pages.
