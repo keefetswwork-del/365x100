@@ -17,7 +17,7 @@ test("parses a valid private history page", () => {
     nextCursor: "2026-08-17",
   })).toEqual({
     hasMore: true,
-    items: [first],
+    items: [{ ...first, media: null }],
     nextCursor: "2026-08-17",
   });
 });

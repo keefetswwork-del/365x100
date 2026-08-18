@@ -111,6 +111,6 @@ test("parses progress totals without accepting journal content", () => {
     yearWords: 250,
   });
   expect(parsed.currentStreak).toBe(2);
-  expect(parsed.calendar[0]).toEqual({ completed: true, entryDate: "2026-08-16", hasWriting: true, wordCount: 130 });
+  expect(parsed.calendar[0]).toEqual({ completed: true, entryDate: "2026-08-16", hasPhoto: false, hasWriting: true, wordCount: 130 });
   expect(JSON.stringify(parsed)).not.toContain("content");
 });

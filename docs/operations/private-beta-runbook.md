@@ -59,3 +59,14 @@ Reference: [Supabase database backups](https://supabase.com/docs/guides/platform
 ## Current acceptance status
 
 Live off-site backup creation and a restore drill are **deferred** for Build 3.3. The documented procedure is not evidence that a recoverable backup exists. Build 3.3 operations must continue to report backup acceptance as deferred until both a backup and restore drill have actually succeeded.
+
+## Private media operations
+
+- Refresh the Founder Media Capacity report before broadening beta access. Review attached photos, total bytes, free accounts at the 10-photo limit, recent failures and the cleanup backlog without opening journal or image content.
+- Treat 1,000,000 bytes as the exact processed-object ceiling. The private `journal-media` bucket accepts only WebP objects, while the authenticated Edge Function validates magic bytes, dimensions, ownership, consent, quota and optimistic replacement state.
+- Keep exactly one `cleanup-journal-media` cron job scheduled hourly. It must use the same Vault and Edge `CRON_SECRET`; never place that secret in Render.
+- Investigate cleanup retries through closed error codes and object counts. Do not paste private paths into support messages or founder reports.
+- Grant or expire beta Premium access only through `media_entitlements` using an authenticated founder database session. Premium is not a checkout product in Build 3.3.2.
+- If uploads fail, preserve text saving and existing photos first. A frontend rollback may leave the additive media schema and functions in place for old-client compatibility.
+- Before account deletion, the `delete-account` Edge Function removes owned Storage objects through the Storage API. Database cascades then remove metadata and entitlements; the cleanup queue handles interrupted deletion attempts.
+- Do not delete rows directly from `storage.objects`. Supabase Storage objects must be removed through the Storage API.

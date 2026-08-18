@@ -13,6 +13,7 @@ export interface CalendarDay {
   completed: boolean;
   entryDate: string;
   hasWriting: boolean;
+  hasPhoto?: boolean;
   wordCount: number;
 }
 
@@ -72,6 +73,7 @@ export interface CalendarGridDay {
   dayOfMonth: number;
   inVisibleMonth: boolean;
   isToday: boolean;
+  hasPhoto?: boolean;
   state: CalendarDayState;
   wordCount: number;
 }

@@ -41,7 +41,7 @@ test("shows an accessible footer and opens legal pages in new tabs", async ({ pa
 test("renders complete legal documents with section navigation", async ({ page }) => {
   await page.goto("/privacy");
   await expect(page).toHaveTitle("Privacy Policy | 365x100");
-  await expect(page.getByText("Effective date: 17 August 2026", { exact: true })).toBeVisible();
+  await expect(page.getByText("Effective date: 18 August 2026", { exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "365x100 Privacy Policy sections" }).getByRole("link")).toHaveCount(13);
   await expect(page.getByRole("heading", { level: 2, name: "6. Storage locations and overseas processing" })).toBeVisible();
   await expect(page.getByRole("link", { name: "hello@365x100.com" }).first()).toHaveAttribute("href", "mailto:hello@365x100.com");

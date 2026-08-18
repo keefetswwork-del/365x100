@@ -13,6 +13,7 @@ import { AccountPanel } from "@/components/account-panel";
 import { AuthPanel } from "@/components/auth-panel";
 import { BrandWordmark } from "@/components/brand-wordmark";
 import { ConflictPanel } from "@/components/conflict-panel";
+import { EntryPhoto } from "@/components/entry-photo";
 import { HabitDashboard } from "@/components/habit-dashboard";
 import { HabitOnboarding } from "@/components/habit-onboarding";
 import { LegalConsentPanel } from "@/components/legal-consent-panel";
@@ -43,9 +44,12 @@ import {
 } from "@/lib/cloud-entry";
 import type { Database } from "@/lib/database.types";
 import {
-  buildPortableArchive,
+  buildPortableZip,
+  choosePortableZipDestination,
+  downloadBlob,
   downloadTextFile,
   serializePlainTextEntries,
+  streamPortableZip,
 } from "@/lib/entry-export";
 import {
   migrateAnonymousEntries,
@@ -104,6 +108,7 @@ import type {
   HistoryPage,
   JournalLibraryView,
 } from "@/types/history";
+import type { EntryMedia } from "@/types/media";
 
 const WORD_TARGET = 100;
 const SAVE_DELAY_MS = 300;
@@ -182,6 +187,8 @@ export function JournalEditor() {
   const [online, setOnline] = useState(true);
   const [legalAcceptanceRequired, setLegalAcceptanceRequired] = useState(false);
   const [legalAcceptanceError, setLegalAcceptanceError] = useState("");
+  const [cloudEntryId, setCloudEntryId] = useState<string | null>(null);
+  const [entryMedia, setEntryMedia] = useState<EntryMedia | null>(null);
 
   const entryRef = useRef(entry);
   const richEntryRef = useRef<RichEntryDocument | null>(richEntry);
@@ -292,6 +299,8 @@ export function JournalEditor() {
     previousWordCountRef.current = restoredWordCount;
     versionRef.current = 0;
     hasEditedRef.current = false;
+    setCloudEntryId(null);
+    setEntryMedia(null);
     analyticsStartedRef.current = false;
     startTransition(() => {
       setEntry(restoredEntry);
@@ -346,6 +355,7 @@ export function JournalEditor() {
 
           if (isCurrent) {
             versionRef.current = saved.version;
+            setCloudEntryId(saved.id);
           }
 
           if (
@@ -385,6 +395,8 @@ export function JournalEditor() {
     knownConflicts = conflictsRef.current,
   ) {
     setIsReady(false);
+    setCloudEntryId(null);
+    setEntryMedia(null);
     pastEntryUnavailableRef.current = false;
     setPastEntryUnavailable(false);
     setWelcomeBackVisible(false);
@@ -398,6 +410,8 @@ export function JournalEditor() {
       const restoredCount = countWords(conflict.localContent);
       richEntryRef.current = conflict.localRichContent;
       versionRef.current = conflict.remote.version;
+      setCloudEntryId(conflict.remote.id);
+      setEntryMedia(conflict.remote.media ?? null);
       previousWordCountRef.current = restoredCount;
       restoreEditorDocument(conflict.localContent, conflict.localRichContent);
       setHasCompleted(restoredCount >= WORD_TARGET);
@@ -444,6 +458,8 @@ export function JournalEditor() {
 
       startTransition(() => {
         restoreEditorDocument(restored, restoredRich);
+        setCloudEntryId(remote?.id ?? null);
+        setEntryMedia(remote?.media ?? null);
         setHasCompleted(restoredCount >= WORD_TARGET);
         setSaveStatus("saved-cloud");
         setIsReady(true);
@@ -554,7 +570,7 @@ export function JournalEditor() {
   }
 
   useEffect(() => {
-    restoreAnonymousDate();
+    queueMicrotask(restoreAnonymousDate);
     const activeClient = getSupabaseClient();
     if (!activeClient) {
       queueMicrotask(() => {
@@ -992,6 +1008,24 @@ export function JournalEditor() {
     await queueRef.current?.whenIdle();
   }
 
+  async function ensureEntryForPhoto(): Promise<string> {
+    if (!client || !session || !profile || !navigator.onLine) {
+      throw new Error("Reconnect before adding a photo.");
+    }
+    if (cloudEntryId) return cloudEntryId;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    persistCurrentImmediately();
+    await queueRef.current?.whenIdle();
+    const remote = await fetchCloudEntry(client, localDateRef.current);
+    if (!remote) throw new Error("The dated entry could not be prepared for a photo.");
+    setCloudEntryId(remote.id);
+    setEntryMedia(remote.media ?? null);
+    return remote.id;
+  }
+
   async function exportEntries(entryDates?: string[]) {
     if (!client) throw new Error("Authentication required.");
     try {
@@ -1016,21 +1050,24 @@ export function JournalEditor() {
 
   async function downloadPortableData() {
     if (!client || !session || !profile) throw new Error("Authentication required.");
+    const today = todayDateRef.current || getLocalDateString();
+    const filename = `365x100-data-${today}.zip`;
+    const writable = await choosePortableZipDestination(filename);
     try {
       await flushBeforeExport();
-      const archive = await buildPortableArchive(client, {
+      const input = {
         email: session.user.email ?? "",
         entries: await fetchAllCloudEntries(client),
         preferences: preferencesFromProfile(profile),
         profile,
-      });
-      const today = todayDateRef.current || getLocalDateString();
-      downloadTextFile(
-        `365x100-data-${today}.json`,
-        JSON.stringify(archive, null, 2),
-        "application/json",
-      );
+      };
+      if (writable) {
+        await streamPortableZip(client, writable, input);
+      } else {
+        downloadBlob(filename, await buildPortableZip(client, input));
+      }
     } catch (error) {
+      await writable?.abort?.().catch(() => undefined);
       void recordOperationalEvent(client, "export", "export-failed");
       throw error;
     }
@@ -1324,6 +1361,20 @@ export function JournalEditor() {
                 </div>
               ) : (
                 <>
+                  {signedIn && client && (
+                    <EntryPhoto
+                      client={client}
+                      disabled={!isReady || Boolean(conflicts.length)}
+                      ensureEntry={ensureEntryForPhoto}
+                      entryDate={localDate}
+                      media={entryMedia}
+                      onChange={(nextMedia) => {
+                        setEntryMedia(nextMedia);
+                        void refreshHabitDashboard();
+                      }}
+                      online={online}
+                    />
+                  )}
                   <RichJournalEditor
                     key={editorLoadKey}
                     describedBy="entry-progress"
@@ -1377,7 +1428,7 @@ export function JournalEditor() {
       {session && <LegalConsentPanel errorMessage={legalAcceptanceError} open={legalAcceptanceRequired} onAccept={completeLegalAcceptance} onSignOut={signOut} />}
       {timezoneRequired && session && !legalAcceptanceRequired && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && !legalAcceptanceRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onCheckEntryExists={checkEntryExists} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onRhythmViewed={() => void recordProductEvent(client, "writing_rhythm_viewed", todayDateRef.current)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
+      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} client={client} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onCheckEntryExists={checkEntryExists} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onRhythmViewed={() => void recordProductEvent(client, "writing_rhythm_viewed", todayDateRef.current)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
       {profile && session && (
         <AccountPanel key={profile.userId} dataDownloadBlockedReason={exportBlockedReason} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onDownloadData={downloadPortableData} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}

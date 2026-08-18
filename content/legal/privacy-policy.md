@@ -1,6 +1,6 @@
 # 365x100 Privacy Policy
 
-**Effective date: 17 August 2026**
+**Effective date: 18 August 2026**
 
 365x100 is an independently operated private beta service administered from Singapore ("365x100", "we", "us" or "our"). This Policy explains how we handle personal data when you use the beta.
 
@@ -19,11 +19,14 @@ We may collect and store:
 - Your email address, account identifier and authentication information.
 - Basic profile information supplied by Google if you choose Google sign-in.
 - Journal entries, rich-text formatting, entry dates, word counts and completion status.
+- Optional photographs attached to journal entries, together with processed dimensions and file size.
 - Your timezone, prompt preferences and optional weekly-review preferences.
 - Streaks, writing statistics, allow-listed writing milestones and email-delivery diagnostics.
 - Support messages.
 
-Search phrases are processed to return matching entries from your own account. We do not intentionally store search phrases in product analytics or place them in URLs. Export selections and generated downloads are handled in your browser and are not sent to another service to create the export.
+When you attach a photograph, your browser corrects its orientation, resizes it, converts it to WebP and removes embedded metadata such as EXIF and GPS information before upload. We do not retain the original filename or original file. Photographs are not analysed by artificial intelligence.
+
+Search phrases are processed to return matching entries from your own account. We do not intentionally store search phrases in product analytics or place them in URLs. Export selections and generated downloads are assembled in your browser. Your private photographs are retrieved from Supabase only so they can be included in your requested download; they are not sent to another service to create the export.
 
 Our infrastructure providers may process limited technical and security information, such as IP addresses, browser or device information and errors, in their operational logs.
 
@@ -38,14 +41,14 @@ Before registration or synchronisation, drafts may be stored locally in your bro
 We use information to:
 
 - Create and secure accounts.
-- Save, synchronise, display, search and export entries.
+- Save, synchronise, display, search and export entries and optional photographs.
 - Calculate word counts, streaks and progress.
 - Provide prompts and optional weekly writing reviews.
 - Resolve support and saving issues.
 - Protect and improve the beta.
 - Comply with law and enforce our Terms of Use.
 
-Journal entries are private to your account by default. We do not routinely read them, sell them, use them for advertising, publish them or use them to train artificial-intelligence models.
+Journal entries and attached photographs are private to your account by default. We do not routinely read or view them, sell them, use them for advertising, publish them, analyse photographs with artificial intelligence or use journal content or photographs to train artificial-intelligence models.
 
 365x100 does not currently generate AI summaries or process payments.
 
@@ -53,7 +56,7 @@ Journal entries are private to your account by default. We do not routinely read
 
 We use service providers to operate the beta, including:
 
-- Supabase for authentication, database and backend services.
+- Supabase for authentication, database, private photograph storage and backend services.
 - Google for Google sign-in, if selected.
 - Resend for authentication and optional weekly-review emails.
 - Render for website hosting and delivery.
@@ -74,11 +77,11 @@ We may send authentication, security and service emails. Optional weekly writing
 
 We retain account and journal information while your account is active and as reasonably necessary to operate and secure the beta.
 
-Deleting your account removes your account, journal entries and associated live data promptly. Deleted information may remain temporarily in protected backups until those backups are overwritten through normal retention cycles. Those copies are not available through the service or used for another purpose. Limited security or legal records may be retained where reasonably necessary.
+Removing a photograph removes its live metadata immediately and schedules its private storage object for deletion. Deleting your account removes your account, journal entries, attached photographs and associated live data promptly. Deleted information may remain temporarily in protected backups until those backups are overwritten through normal retention cycles. Those copies are not available through the service or used for another purpose. Limited security or legal records may be retained where reasonably necessary.
 
 ## 9. Security
 
-We use reasonable safeguards, including encrypted connections, authentication, access controls and database rules designed to prevent users from accessing another user's entries. No online service can guarantee absolute security.
+We use reasonable safeguards, including encrypted connections, authentication, access controls, private photograph storage, short-lived access links and database rules designed to prevent users from accessing another user's entries or photographs. No online service can guarantee absolute security.
 
 Contact [hello@365x100.com](mailto:hello@365x100.com) promptly if you suspect unauthorised access. If a data breach occurs, we will assess it and provide notifications where required by applicable law.
 
@@ -87,6 +90,7 @@ Contact [hello@365x100.com](mailto:hello@365x100.com) promptly if you suspect un
 You may:
 
 - Access, edit, search and export your entries.
+- Add, replace, download or remove photographs attached to your entries.
 - Disable optional weekly reviews.
 - Delete your account.
 - Request access to or correction of personal data by emailing [hello@365x100.com](mailto:hello@365x100.com).

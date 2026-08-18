@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/lib/database.types";
+import { mapEntryMedia } from "@/lib/entry-media";
 import type {
   HistoryEntrySummary,
   HistoryFilters,
@@ -31,6 +32,7 @@ function parseHistoryItem(value: Json): HistoryEntrySummary | null {
     excerpt: value.excerpt,
     updatedAt: value.updatedAt,
     wordCount: value.wordCount,
+    media: isObject(value.media) ? mapEntryMedia(value.media) : null,
   };
 }
 

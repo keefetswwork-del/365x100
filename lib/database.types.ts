@@ -167,6 +167,51 @@ export type Database = {
           },
         ]
       }
+      entry_media: {
+        Row: {
+          byte_size: number
+          created_at: string
+          entry_id: string
+          height: number
+          id: string
+          mime_type: string
+          operation_id: string
+          storage_path: string
+          updated_at: string
+          user_id: string
+          version: number
+          width: number
+        }
+        Insert: {
+          byte_size: number
+          created_at?: string
+          entry_id: string
+          height: number
+          id?: string
+          mime_type?: string
+          operation_id: string
+          storage_path: string
+          updated_at?: string
+          user_id: string
+          version?: number
+          width: number
+        }
+        Update: {
+          byte_size?: number
+          created_at?: string
+          entry_id?: string
+          height?: number
+          id?: string
+          mime_type?: string
+          operation_id?: string
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+          width?: number
+        }
+        Relationships: []
+      }
       legal_acceptances: {
         Row: {
           accepted_at: string
@@ -198,6 +243,7 @@ export type Database = {
       }
       legal_document_versions: {
         Row: {
+          account_gate_from: string | null
           created_at: string
           document_type: string
           effective_date: string
@@ -205,6 +251,7 @@ export type Database = {
           version: string
         }
         Insert: {
+          account_gate_from?: string | null
           created_at?: string
           document_type: string
           effective_date: string
@@ -212,11 +259,114 @@ export type Database = {
           version: string
         }
         Update: {
+          account_gate_from?: string | null
           created_at?: string
           document_type?: string
           effective_date?: string
           is_current?: boolean
           version?: string
+        }
+        Relationships: []
+      }
+      media_cleanup_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          last_error_code: string | null
+          next_attempt_at: string
+          reason: string
+          storage_path: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: number
+          last_error_code?: string | null
+          next_attempt_at?: string
+          reason: string
+          storage_path: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: number
+          last_error_code?: string | null
+          next_attempt_at?: string
+          reason?: string
+          storage_path?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      media_entitlements: {
+        Row: {
+          expires_at: string | null
+          granted_at: string
+          tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          granted_at?: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          granted_at?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      media_events: {
+        Row: {
+          dedupe_key: string
+          duration_bucket: string | null
+          entitlement: string
+          entry_date: string | null
+          event_name: string
+          failure_category: string | null
+          id: number
+          occurred_at: string
+          operation_id: string
+          size_bucket: string | null
+          user_id: string
+        }
+        Insert: {
+          dedupe_key: string
+          duration_bucket?: string | null
+          entitlement: string
+          entry_date?: string | null
+          event_name: string
+          failure_category?: string | null
+          id?: number
+          occurred_at?: string
+          operation_id: string
+          size_bucket?: string | null
+          user_id: string
+        }
+        Update: {
+          dedupe_key?: string
+          duration_bucket?: string | null
+          entitlement?: string
+          entry_date?: string | null
+          event_name?: string
+          failure_category?: string | null
+          id?: number
+          occurred_at?: string
+          operation_id?: string
+          size_bucket?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -383,7 +533,25 @@ export type Database = {
       }
     }
     Functions: {
+      accept_media_privacy: { Args: never; Returns: Json }
       accept_current_legal_documents: { Args: never; Returns: Json }
+      commit_entry_media: {
+        Args: {
+          p_byte_size: number
+          p_entry_id: string
+          p_expected_media_id?: string | null
+          p_expected_version?: number | null
+          p_height: number
+          p_media_id: string
+          p_operation_id: string
+          p_storage_path: string
+          p_user_id: string
+          p_width: number
+        }
+        Returns: Json
+      }
+      complete_media_cleanup: { Args: { p_storage_paths: string[] }; Returns: undefined }
+      current_media_tier: { Args: { p_user_id: string }; Returns: string }
       claim_due_weekly_reviews: {
         Args: { p_limit?: number; p_now?: string }
         Returns: {
@@ -422,6 +590,7 @@ export type Database = {
         Returns: undefined
       }
       get_current_legal_status: { Args: never; Returns: Json }
+      get_media_account_status: { Args: never; Returns: Json }
       get_daily_prompt: {
         Args: { p_entry_date: string; p_refresh?: boolean }
         Returns: {
@@ -460,6 +629,25 @@ export type Database = {
       is_valid_rich_entry: { Args: { value: Json }; Returns: boolean }
       is_valid_timezone: { Args: { value: string }; Returns: boolean }
       mark_welcome_back: { Args: { p_entry_date: string }; Returns: string }
+      media_cleanup_candidates: {
+        Args: { p_limit?: number }
+        Returns: { attempts: number; storage_path: string }[]
+      }
+      orphaned_media_objects: {
+        Args: { p_limit?: number }
+        Returns: { storage_path: string }[]
+      }
+      record_media_event: {
+        Args: {
+          p_duration_bucket?: string | null
+          p_entry_date?: string | null
+          p_event_name: string
+          p_failure_category?: string | null
+          p_operation_id: string
+          p_size_bucket?: string | null
+        }
+        Returns: boolean
+      }
       record_operational_event: {
         Args: {
           p_error_code: string
@@ -475,6 +663,10 @@ export type Database = {
           p_session_id?: string
         }
         Returns: boolean
+      }
+      remove_entry_media: {
+        Args: { p_expected_version: number; p_media_id: string; p_user_id: string }
+        Returns: Json
       }
       save_entry: {
         Args: {

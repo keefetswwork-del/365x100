@@ -8,6 +8,7 @@ import {
   type RichEntryDocument,
 } from "@/lib/rich-text";
 import type { CloudEntry, Profile, SaveEntryResult } from "@/types/cloud";
+import { fetchAllEntryMedia, fetchEntryMedia, mapEntryMedia } from "@/lib/entry-media";
 
 type Client = SupabaseClient<Database>;
 type EntryRow = Tables<"entries">;
@@ -121,7 +122,8 @@ export async function fetchCloudEntry(
     throw new CloudRequestError("Entry could not be loaded.");
   }
 
-  return data ? mapEntry(data) : null;
+  if (!data) return null;
+  return { ...mapEntry(data), media: await fetchEntryMedia(client, data.id) };
 }
 
 export async function fetchCloudEntries(
@@ -140,7 +142,18 @@ export async function fetchCloudEntries(
     throw new CloudRequestError("Entries could not be loaded.");
   }
 
-  return data.map(mapEntry);
+  const entries = data.map(mapEntry);
+  if (entries.length === 0) return entries;
+  const { data: media, error: mediaError } = await client
+    .from("entry_media")
+    .select("*")
+    .in("entry_id", entries.map((entry) => entry.id));
+  if (mediaError) throw new CloudRequestError("Entry photos could not be loaded.");
+  const byEntry = new Map(media.map((item) => [item.entry_id, item]));
+  return entries.map((entry) => ({
+    ...entry,
+    media: byEntry.has(entry.id) ? mapEntryMedia(byEntry.get(entry.id)!) : null,
+  }));
 }
 
 export async function fetchCloudEntriesByDates(
@@ -166,7 +179,11 @@ export async function fetchAllCloudEntries(client: Client): Promise<CloudEntry[]
       .range(offset, offset + pageSize - 1);
     if (error) throw new CloudRequestError("Entries could not be exported.");
     entries.push(...data.map(mapEntry));
-    if (data.length < pageSize) return entries;
+    if (data.length < pageSize) {
+      const media = await fetchAllEntryMedia(client);
+      const byEntry = new Map(media.map((item) => [item.entryId, item]));
+      return entries.map((entry) => ({ ...entry, media: byEntry.get(entry.id) ?? null }));
+    }
   }
 }
 

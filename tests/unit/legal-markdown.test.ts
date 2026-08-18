@@ -27,12 +27,20 @@ test("loads both complete legal documents from their Markdown sources", () => {
 
   expect(privacy.title).toBe("365x100 Privacy Policy");
   expect(terms.title).toBe("365x100 Private Beta Terms of Use");
-  expect(privacy.effectiveDate).toBe("17 August 2026");
+  expect(privacy.effectiveDate).toBe("18 August 2026");
   expect(terms.effectiveDate).toBe("17 August 2026");
   expect(privacy.sections).toHaveLength(13);
   expect(terms.sections).toHaveLength(13);
   expect(privacy.sections[0].text).toBe("1. Who may use the beta");
   expect(terms.sections[12].text).toBe("13. Contact");
+});
+
+test("discloses private photo processing without claiming AI analysis", () => {
+  const privacy = getLegalDocument("privacy");
+  const text = documentText(privacy.blocks);
+  expect(text).toContain("removes embedded metadata");
+  expect(text).toContain("Photographs are not analysed by artificial intelligence");
+  expect(text).toContain("short-lived access links");
 });
 
 test("publishes the corrected infrastructure and deletion wording", () => {

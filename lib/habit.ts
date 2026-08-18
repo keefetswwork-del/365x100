@@ -30,6 +30,7 @@ function parseCalendar(value: Json | undefined): CalendarDay[] {
     return [{
       completed: item.completed === true,
       entryDate: item.entryDate,
+      hasPhoto: item.hasPhoto === true,
       hasWriting: item.hasWriting === true || wordCount > 0,
       wordCount,
     }];
@@ -164,6 +165,7 @@ export function buildCalendarGrid(summary: HabitSummary): CalendarGridDay[] {
     return {
       date,
       dayOfMonth: current.getUTCDate(),
+      hasPhoto: entry?.hasPhoto ?? false,
       inVisibleMonth: current.getUTCMonth() === month - 1,
       isToday: date === summary.today,
       state,

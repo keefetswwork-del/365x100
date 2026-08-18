@@ -102,8 +102,10 @@ export function AccountPanel({
     try {
       await onDownloadData();
       setMessage("Your data download is ready.");
-    } catch {
-      setMessage("Your data could not be downloaded. Nothing was removed.");
+    } catch (error) {
+      setMessage(error instanceof Error
+        ? error.message
+        : "Your data could not be downloaded. Nothing was removed.");
     } finally {
       setIsWorking(false);
     }
@@ -142,7 +144,7 @@ export function AccountPanel({
 
         <section className="mt-5 rounded-2xl border border-[var(--line)] bg-white/55 p-5">
           <h3 className="font-serif text-2xl">Your data</h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Download a portable JSON copy of your preferences, prompts and every plain and formatted entry. Analytics and delivery diagnostics are excluded.</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Download a portable ZIP containing your preferences, prompts, every plain and formatted entry, and your processed photos. Analytics and delivery diagnostics are excluded.</p>
           <button type="button" disabled={isWorking || Boolean(dataDownloadBlockedReason)} onClick={() => void downloadData()} className="mt-4 w-full rounded-full border border-[var(--ink)] px-5 py-3 font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">Download my data</button>
           {dataDownloadBlockedReason && <p className="mt-2 text-xs font-semibold text-[var(--muted)]">{dataDownloadBlockedReason}</p>}
         </section>

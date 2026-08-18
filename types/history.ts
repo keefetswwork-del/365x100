@@ -1,5 +1,6 @@
 import type { RichEntryDocument } from "@/lib/rich-text";
 import type { HabitPreferences } from "@/types/habit";
+import type { EntryMedia } from "@/types/media";
 
 export type JournalLibraryView = "progress" | "calendar" | "history";
 
@@ -15,6 +16,7 @@ export interface HistoryEntrySummary {
   excerpt: string;
   updatedAt: string;
   wordCount: number;
+  media?: EntryMedia | null;
 }
 
 export interface HistoryPage {
@@ -51,4 +53,20 @@ export interface PortableArchiveV1 {
   format: "365x100-portable-archive";
   promptAssignments: PortablePromptAssignment[];
   version: 1;
+}
+
+export interface PortableArchiveMedia {
+  byteSize: number;
+  createdAt: string;
+  entryDate: string;
+  file: string;
+  height: number;
+  mimeType: "image/webp";
+  updatedAt: string;
+  width: number;
+}
+
+export interface PortableArchiveV2 extends Omit<PortableArchiveV1, "version"> {
+  media: PortableArchiveMedia[];
+  version: 2;
 }

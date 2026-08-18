@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { createClient } from "@supabase/supabase-js";
+import { unzipSync } from "fflate";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
@@ -268,11 +269,12 @@ test("configures return habits, persists prompts, and safely edits past entries"
     const archiveDownloadPromise = page.waitForEvent("download");
     await accountAfterWriting.getByRole("button", { name: "Download my data" }).click();
     const archiveDownload = await archiveDownloadPromise;
-    expect(archiveDownload.suggestedFilename()).toMatch(/^365x100-data-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(archiveDownload.suggestedFilename()).toMatch(/^365x100-data-\d{4}-\d{2}-\d{2}\.zip$/);
     const archivePath = await archiveDownload.path();
     expect(archivePath).not.toBeNull();
-    const archive = JSON.parse(readFileSync(archivePath!, "utf8")) as Record<string, unknown>;
-    expect(archive).toMatchObject({ format: "365x100-portable-archive", version: 1 });
+    const archiveFiles = unzipSync(new Uint8Array(readFileSync(archivePath!)));
+    const archive = JSON.parse(new TextDecoder().decode(archiveFiles["365x100-data.json"])) as Record<string, unknown>;
+    expect(archive).toMatchObject({ format: "365x100-portable-archive", version: 2 });
     expect(JSON.stringify(archive)).toContain(updatedPastEntry);
     expect(JSON.stringify(archive)).toContain("contentRich");
     expect(JSON.stringify(archive)).not.toContain(userId);

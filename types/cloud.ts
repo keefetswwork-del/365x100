@@ -1,4 +1,5 @@
 import type { RichEntryDocument } from "@/lib/rich-text";
+import type { EntryMedia } from "@/types/media";
 
 export type CloudSaveStatus =
   | "restoring"
@@ -35,6 +36,7 @@ export interface CloudEntry {
   version: number;
   createdAt: string;
   updatedAt: string;
+  media?: EntryMedia | null;
 }
 
 export type SaveEntryResult =

@@ -1,7 +1,10 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { PrivatePhoto } from "@/components/private-photo";
+import type { Database } from "@/lib/database.types";
 import { buildCalendarGrid, formatMonth, monthStart, shiftDate } from "@/lib/habit";
 import { mergeHistoryPages } from "@/lib/history";
 import { writingYearProgressPercent } from "@/lib/writing-year";
@@ -10,6 +13,7 @@ import type { HabitSummary } from "@/types/habit";
 import type { HistoryEntrySummary, HistoryFilters, HistoryPage, JournalLibraryView } from "@/types/history";
 
 interface HabitDashboardProps {
+  client: SupabaseClient<Database> | null;
   exportBlockedReason: string | null;
   initialView: JournalLibraryView;
   loading: boolean;
@@ -62,6 +66,7 @@ function historyDate(entryDate: string): string {
 }
 
 export function HabitDashboard({
+  client,
   exportBlockedReason,
   initialView,
   loading,
@@ -314,6 +319,7 @@ export function HabitDashboard({
                   {showMonth && <h3 className="mb-2 mt-6 font-serif text-2xl">{historyMonth(entry.entryDate)}</h3>}
                   <article className={`flex gap-3 rounded-2xl border bg-white/60 p-3 transition ${selected ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : "border-[var(--line)]"}`}>
                     {selectionMode && <label className="grid h-11 w-11 shrink-0 place-items-center"><input type="checkbox" checked={selected} onChange={() => toggleSelected(entry.entryDate)} aria-label={`Select entry for ${historyDate(entry.entryDate)}`} className="h-5 w-5 accent-[var(--accent)]" /></label>}
+                    {client && entry.media && <PrivatePhoto client={client} media={entry.media} alt={`Photo for ${historyDate(entry.entryDate)}`} className="h-24 w-24 shrink-0 rounded-xl object-cover" />}
                     <button type="button" onClick={() => onSelectDate(entry.entryDate)} className="min-w-0 flex-1 rounded-xl px-2 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
                       <span className="flex flex-wrap items-center justify-between gap-2"><strong>{historyDate(entry.entryDate)}</strong><span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-wider ${entry.completed ? "bg-[var(--accent)] text-white" : "bg-[var(--sage)]/45 text-[var(--ink)]"}`}>{entry.completed ? "100-word goal" : "Memory saved"}</span></span>
                       <span className="mt-1 block text-xs font-semibold text-[var(--muted)]">{entry.wordCount} {entry.wordCount === 1 ? "word" : "words"}</span>
@@ -403,7 +409,7 @@ function CalendarView({ canMoveForward, dayRefs, days, moveCalendarFocus, onNext
         if (!offset) return;
         event.preventDefault();
         moveCalendarFocus(index, offset);
-      }} aria-current={day.isToday ? "date" : undefined} aria-pressed={selected} aria-label={`${day.date}: ${stateLabel(day.state)}${day.wordCount ? `, ${day.wordCount} words` : ""}`} className={`aspect-square rounded-xl text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${stateClass(day.state)} ${selected ? "ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--paper)]" : day.isToday ? "ring-2 ring-[var(--sage)] ring-offset-2 ring-offset-[var(--paper)]" : ""} ${day.inVisibleMonth ? "" : "opacity-30"}`}>{day.dayOfMonth}</button>;
+      }} aria-current={day.isToday ? "date" : undefined} aria-pressed={selected} aria-label={`${day.date}: ${stateLabel(day.state)}${day.wordCount ? `, ${day.wordCount} words` : ""}${day.hasPhoto ? ", photo attached" : ""}`} className={`relative aspect-square rounded-xl text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${stateClass(day.state)} ${selected ? "ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--paper)]" : day.isToday ? "ring-2 ring-[var(--sage)] ring-offset-2 ring-offset-[var(--paper)]" : ""} ${day.inVisibleMonth ? "" : "opacity-30"}`}>{day.dayOfMonth}{day.hasPhoto && <span aria-hidden="true" className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />}</button>;
     })}</div>
     <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold text-[var(--muted)]"><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />100-word goal reached</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[var(--sage)]/60" />Memory saved</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full border border-[var(--line)]" />No memory yet</span></div>
   </section>;
