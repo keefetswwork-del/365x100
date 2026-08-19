@@ -75,12 +75,14 @@ The build-numbered roadmap below is the implementation source of truth. Earlier 
 4. Build 3.1: Rich writing and product story — delivered.
 5. Build 3.2: History, search and export foundation — delivered.
 6. Build 3.3: Writing-Year Foundations and Beta Operations — delivered.
-7. Build 3.3.1: Life Story Without Streak Pressure — next.
-8. Build 3.4: Monthly Chapters and Annual Digital Books — planned.
-9. Build 4: Monetisation — planned.
-10. Build 5: Printed-book validation — planned.
-11. Build 6: Installable PWA — planned.
-12. Build 7: Validate before expanding — ongoing measurement after release.
+7. Build 3.3.1: Life Story Without Streak Pressure — delivered.
+8. Build 3.3.2: Private Media Uploads — delivered.
+9. Build 3.4A: AI-Edited Monthly Chapters — current.
+10. Build 3.4B: Annual Digital Books — gated by monthly quality validation.
+11. Build 4: Monetisation — planned.
+12. Build 5: Printed-book validation — planned.
+13. Build 6: Installable PWA — planned.
+14. Build 7: Validate before expanding — ongoing measurement after release.
 
 Phase 1: Core writing experience
 Build:
@@ -1327,6 +1329,12 @@ Monthly Chapters follow calendar months.
 Annual Books follow rolling 365-day Personal Years.
 Annual Books are generated from source entries, not merged Monthly Chapter PDFs.
 Generation must remain private, secure and reproducible.
+
+Implementation order
+
+Build 3.4 ships in two production releases. Build 3.4A establishes entry titles, Monthly Chapters, AI review, photographs, previews and A5 PDFs. Build 3.4B adds Annual Digital Books only after ten monthly test generations achieve at least 80% factual-accuracy approval, zero confirmed invented material facts and no privacy, ordering or media-placement defects.
+
+English is the only supported AI editorial language during the private beta. Original entries written in English, Chinese, Malay or Tamil must remain unchanged and render correctly in previews and PDFs.
 1. Monthly Chapter eligibility
 
 A calendar month qualifies when:
