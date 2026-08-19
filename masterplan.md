@@ -1304,97 +1304,473 @@ Want additional photographs strongly enough to justify expanding beyond one imag
 
 Do not expand to three images per entry unless repeated real-user feedback demonstrates that one photograph is materially insufficient.
 
-# Addendum: Build 3.4 — Monthly Chapters and Annual Digital Books
+# Build 3.4 — AI-Edited Monthly Chapters and Annual Digital Books
+Purpose
 
-## Purpose
+Turn users’ entries and photographs into the core 365×100 outcome:
 
-Turn daily entries into the core 365x100 outcome: monthly chapters that help users revisit their writing and an annual digital book based on each user’s personal 365-day writing year.
+AI-edited Monthly Chapters based on calendar months
+AI-edited Annual Books based on each user’s Personal Year
+Chronological presentation of original entries
+One optional photograph above each entry
+In-app previews and downloadable PDFs
 
-Build 3.4 covers digital generation only. Printed-book ordering, payments, AI summaries and media uploads are excluded.
+Payments, subscriptions, printing and fulfilment remain outside this build.
 
-## 1. Monthly chapter system
+Core principles
+Original entries remain the source of truth.
+AI adds an editable editorial layer; it never replaces original writing.
+AI must not invent events, emotions or conclusions.
+Users review and approve all AI-generated content.
+Photographs appear above their entries but are never sent to AI.
+Monthly Chapters follow calendar months.
+Annual Books follow rolling 365-day Personal Years.
+Annual Books are generated from source entries, not merged Monthly Chapter PDFs.
+Generation must remain private, secure and reproducible.
+1. Monthly Chapter eligibility
 
-- Treat each calendar month as a potential monthly chapter.
-- Count distinct visible-content writing days within that calendar month.
-- Require at least 10 writing days for a monthly chapter to be created.
-- Entry length does not affect monthly eligibility; whitespace-only drafts do not count.
-- Show progress toward eligibility during the month, such as:
-  - 7 of 10 completed days
-  - 3 more completed days needed
-- Evaluate eligibility after the calendar month ends.
-- Compile eligible entries in chronological order.
-- Include:
-  - Month and year
-  - Entry date
-  - Entry title, when available
-  - Rich-text entry content
-  - Number of writing days
-- Provide an in-app monthly chapter view.
-- Allow eligible monthly chapters to be exported in a portable digital format.
-- Clearly explain why a chapter was not created when the user completed fewer than 10 days.
-- Recalculate chapter eligibility when a past entry is edited.
-- Regenerate an existing chapter when its source entries change.
-- Keep monthly chapters aligned to calendar months even when a writing year begins partway through a month.
-- Assign each chapter or relevant portion to the correct personal writing year.
+A calendar month qualifies when:
 
-## 2. Annual digital-book system
+The month has ended.
+The user wrote on at least 10 distinct days.
+Entries contain visible content.
 
-- Make each annual book cover exactly one personal writing year:
-  - Day 1 is the date of the user’s first saved authenticated entry for that writing year.
-  - Day 365 is 364 calendar days later.
-- Generate the annual book only after Day 365 has ended.
-- Require at least 60 visible-content writing days within the Personal Year.
-- Compile entries chronologically within the writing-year boundaries.
-- Organise the book into calendar-month sections.
-- Handle partial first and final calendar months correctly.
-- Include:
-  - A cover page
-  - Writing-year date range
-  - Table of contents
-  - Monthly sections
-  - Entry dates
-  - Entry titles, when available
-  - Rich-text entry content
-  - End-of-year writing statistics
-- Preserve the user’s writing rather than rewriting or summarising it.
-- Do not use AI-generated summaries in this build.
-- Represent missed days through writing statistics or date gaps rather than blank pages.
-- Provide an in-app book preview.
-- Allow the annual book to be exported as a readable PDF.
-- Regenerate the book when an included entry is edited.
-- Preserve completed annual books and allow users to revisit previous writing years.
-- Keep book generation separate from future printed-book purchasing.
+Rules:
 
-## Build 3.4 success conditions
+Entry length does not affect eligibility.
+Sub-100-word entries count.
+Whitespace-only drafts do not count.
+Multiple saves on one date count as one writing day.
+Backdated entries count towards their actual dates.
+Eligibility follows the user’s stored local timezone.
+Monthly Chapters cover complete calendar months, even when they overlap two Personal Years.
+
+Progress language:
+
+7 of 10 writing days
+
+Three more writing days to complete your September Chapter.
+
+For an ineligible month:
+
+You preserved seven days from September. These entries remain in your Journal Library and may still appear in your Annual Book.
+
+2. Monthly Chapter contents
+
+An eligible Monthly Chapter contains:
+
+Cover
+Month and year
+AI-suggested chapter title
+AI-generated Month in Review
+Themes and notable moments
+Selected quotations
+Chronological original entries
+One optional photograph above each entry
+Entry dates and titles
+Supported rich-text formatting
+Writing statistics
+
+AI-generated sections must be visually distinguishable from the user’s original writing.
+
+3. AI editorial process
+
+AI processing begins only after the user selects:
+
+Create my AI-edited chapter
+
+Send only the eligible month’s entry text. Do not send:
+
+Photographs
+Filenames
+Storage paths
+Signed URLs
+Unnecessary account information
+
+The AI returns structured data containing:
+
+Suggested title
+Month in Review
+Themes
+Notable moments
+Exact selected quotations
+Source-entry references where needed
+
+The AI must:
+
+Use only supplied information.
+Avoid invented facts or psychological claims.
+Preserve the user’s tone.
+Distinguish quotations from paraphrases.
+Omit unsupported sections.
+Respond in the user’s writing language unless otherwise selected.
+
+Original entries must never be rewritten.
+
+4. User review
+
+Before finalisation, users can:
+
+Accept or edit AI-generated sections
+Remove individual sections
+Regenerate the editorial content
+Produce a non-AI chapter
+Review entries and photographs
+Preview the final layout
+Download the PDF
+
+Original entries remain editable only through the normal journal editor.
+
+5. Generation states and versioning
+
+Supported states:
+
+ineligible
+eligible
+generating
+draft
+ready
+stale
+generation_failed
+
+Store:
+
+Chapter or book identifier
+User and date range
+Source-entry identifiers and fingerprint
+AI model and prompt version
+Generated and user-edited editorial data
+Approval and regeneration timestamps
+Layout version
+
+When entry text changes:
+
+Mark affected output as stale.
+Preserve the last approved version.
+Let the user regenerate.
+Do not automatically call AI after every edit.
+
+When only a photograph changes, regenerate the layout without repeating AI processing.
+
+The PDF is not the source of truth. Source entries, media records and approved editorial data are.
+
+6. Annual Book eligibility
+
+Each Annual Book covers one Personal Year:
+
+Day 1 is the first authenticated entry assigned to that year.
+Day 365 is 364 calendar days later.
+Generation becomes available after Day 365 ends locally.
+At least 60 distinct writing days are required.
+Fifty-nine days do not qualify.
+Backdated entries belong to their correct Personal Year.
+
+The Annual Book includes every visible entry within the Personal Year, including:
+
+Months with fewer than 10 writing days
+Months without standalone Monthly Chapters
+Partial first and final calendar months
+Entries containing photographs
+
+Entries outside the Personal Year must not appear. Missed days must not create blank pages.
+
+7. Annual Book contents
+
+The Annual Book contains:
+
+Cover and title
+Personal Year date range
+Optional dedication
+Table of contents
+AI-generated opening reflection
+Calendar-month sections
+Monthly titles and reflections
+Chronological original entries
+One optional photograph above each entry
+Year in Moments
+Recurring themes
+Selected quotations
+Writing statistics
+AI-generated closing reflection
+
+The first and final sections may cover partial months.
+
+8. Annual AI process
+
+Use a staged process.
+
+Stage 1: Monthly analysis
+
+For each calendar-month portion:
+
+Process only entries within that Personal Year.
+Reuse approved Monthly Chapter editorial data where appropriate.
+Generate structured editorial data for months without standalone Chapters.
+Handle partial first and final months correctly.
+Stage 2: Annual synthesis
+
+Use validated monthly editorial data to generate:
+
+Book title
+Opening reflection
+Year in Moments
+Recurring themes
+Selected quotations
+Closing reflection
+Stage 3: Review
+
+Users can edit, remove, regenerate or disable AI-generated material before approving the Annual Book.
+
+The original entries remain unchanged.
+
+9. Media inclusion
+
+Each entry may include one optional image from Build 3.3.2.
+
+Rules:
+
+Display the image above the entry.
+Preserve aspect ratio.
+Scale it within the page area.
+Never place images inline between paragraphs.
+Never send images or media metadata to AI.
+Retrieve images through authorised private-storage access.
+Keep each image linked to the correct entry and date.
+
+If an image is unavailable:
+
+Continue rendering the entry.
+Warn the user in the preview.
+Do not show a broken-image placeholder in the final PDF.
+
+If an image and entry do not fit on one page, keep the image above the entry’s beginning and continue the text onto later pages.
+
+10. Rich text and PDF rendering
+
+Support, where technically compatible:
+
+Paragraphs and headings
+Bold, italics and underlining
+Lists and links
+Text colours and highlights
+Unicode characters
+Legacy plain-text entries
+
+Remove unsafe HTML and external embedded content.
+
+Provide:
+
+In-app Monthly Chapter preview
+Monthly Chapter PDF
+In-app Annual Book preview
+Annual Book PDF
+
+The renderer must support:
+
+Embedded fonts
+Cover pages
+Table of contents
+Page numbers
+Photographs
+Long entries
+Automatic page breaks
+Partial months
+Unicode
+
+Preview and PDF must contain the same approved content, photographs and ordering.
+
+11. Secure generation architecture
+
+AI requests must run through a protected server-side function.
+
+Requirements:
+
+Never expose the API key in the browser.
+Authenticate the user.
+Revalidate ownership and eligibility server-side.
+Retrieve only required entry text.
+Exclude all image data.
+Require structured AI output.
+Validate responses before storage.
+Rate-limit requests.
+Prevent duplicate concurrent generation.
+Record token usage without recording journal content.
+
+PDF rendering may occur client-side if private content and media remain securely authorised.
+
+12. Failures and recovery
+
+If AI generation fails:
+
+Preserve entries, photographs and prior approved versions.
+Show a neutral error.
+Allow retrying.
+Avoid duplicate entitlement consumption.
+Do not store partial approved output.
+
+If PDF generation fails:
+
+Preserve approved editorial data.
+Allow PDF generation to be retried without another AI request.
+
+Suggested message:
+
+We couldn’t prepare your chapter right now. Your writing and photographs are safe. Please try again later.
+
+13. Privacy and deletion
+
+Before first AI use, explain:
+
+Which entry text will be processed
+That an AI provider is used
+That photographs are not sent
+That original entries remain unchanged
+That AI may make mistakes
+That users must review the result
+
+Users may generate a non-AI text-and-photo version.
+
+Deleting a generated Chapter or Book must remove its editorial data and generated files without deleting original entries or photographs.
+
+Entry or photograph changes mark related output as stale.
+
+Account deletion removes entries, media, generated editorial data, generated files and generation records.
+
+14. Entitlement readiness
+
+Build 3.4 prepares entitlement controls for:
+
+Monthly Chapter generation and regeneration
+Monthly PDF download
+Annual Book generation and regeneration
+Annual PDF download
+
+Private-beta entitlements may be assigned manually.
+
+Build 4 will determine subscriptions, one-off purchases, regeneration limits, cancellations and permanent Free/Premium rules. Do not hard-code commercial rules into Build 3.4.
+
+15. Analytics
+
+Record privacy-safe events such as:
+
+Eligibility reached
+Generation started, completed or failed
+Review and approval
+Regeneration
+PDF download
+AI editorial removed
+Non-AI output selected
+Output marked stale
+
+Permitted metadata includes:
+
+Output type
+Entry, writing-day and photograph counts
+Token usage
+Generation duration
+Page count
+Failure category
+Model, prompt and layout versions
+Entitlement category
+
+Never record entry contents, titles, generated writing, themes, quotations, photographs, filenames, paths or URLs.
+
+Out of scope
+Stripe and subscriptions
+Printed-book ordering and fulfilment
+More than one image per entry
+Inline images or captions
+Image analysis
+Sending photographs to AI
+AI rewriting of original entries
+Audio or video
+Public or collaborative books
+Human editing
+Printer bleed, spine or colour-profile requirements
+Native applications
+Build 3.4 success conditions
 
 Build 3.4 is complete when:
 
-- A calendar month with nine or fewer writing days does not produce a monthly chapter.
-- A calendar month with at least 10 writing days produces a monthly chapter after the month ends.
-- The eligibility counter includes every visible-content entry regardless of word count and excludes whitespace-only drafts.
-- Monthly chapters contain the correct entries in chronological order.
-- Months containing the beginning or end of a writing year are handled correctly.
-- Users can see why an ineligible month did not generate a chapter.
-- Editing a past entry correctly updates eligibility and regenerates the affected chapter.
-- Monthly chapter formatting preserves dates, titles and supported rich text.
-- An annual book becomes available only after the user’s personal Day 365 has ended.
-- An annual book requires at least 60 writing days in that Personal Year; 59 writing days do not qualify.
-- The annual book contains only entries within the correct 365-day writing year.
-- Partial first and final months appear correctly.
-- Missed days do not create unnecessary blank pages.
-- The preview and exported PDF contain the same entries in the same order.
-- Long entries, page breaks and rich-text formatting render correctly in the PDF.
-- Editing an included entry causes the annual book to regenerate correctly.
-- Previous annual books remain accessible after a new writing year begins.
-- No private journal content is exposed to another user during chapter or book generation.
-- Monthly chapter and annual-book generation pass automated tests and production acceptance testing.
+Eligibility
+Nine monthly writing days do not qualify; 10 qualify after the month ends.
+Sub-100-word entries count and whitespace-only drafts do not.
+Backdated entries and local timezones are handled correctly.
+Annual Books unlock only after Day 365 with at least 60 writing days.
+Fifty-nine annual writing days do not qualify.
+Leap-year and Personal Year boundaries work correctly.
+Content and AI
+Chapters contain only the correct month’s entries in chronological order.
+Annual Books contain only the correct Personal Year’s entries.
+Months below 10 writing days remain included in Annual Books.
+Partial first and final months render correctly.
+AI returns valid structured editorial data.
+Users can edit, remove or regenerate AI sections.
+Users can create non-AI output.
+Original entries remain unchanged.
+AI-generated quotations match source text.
+AI does not receive photograph data.
+Media and rendering
+Each image appears above its corresponding entry.
+Entries without images render correctly.
+Images retain aspect ratio and do not overflow.
+Missing media does not prevent text rendering.
+Rich text, long entries and Unicode render correctly.
+Missed days do not create blank pages.
+Preview and PDF contain identical approved content and ordering.
+Monthly and Annual PDFs download successfully.
+Versioning and recovery
+Generated output records its source fingerprint.
+Entry changes mark affected output as stale.
+Photograph-only changes do not repeat AI processing.
+Previous approved versions remain available until regeneration.
+Failed generation does not corrupt existing output.
+PDF failures can be retried without repeating AI processing.
+Duplicate generation requests are prevented.
+Privacy and security
+AI generation requires explicit user action.
+AI processing occurs server-side.
+API credentials are never exposed.
+Ownership and eligibility are verified server-side.
+Only required entry text is sent to AI.
+Private content never appears in operational logs.
+Users cannot access another user’s entries, media or generated books.
+Account deletion removes all associated generated data.
+Automated and production tests cover eligibility, AI output, media placement, privacy, regeneration and PDFs.
+Validation metrics
 
-## Explicitly excluded from Builds 3.3 and 3.4
+These are product-validation targets, not release blockers.
 
-- Daily reminder emails
-- Paid subscriptions and Stripe
-- Premium history restrictions
-- Printed-book ordering
-- AI-written summaries
-- Photo, audio or video uploads
-- Social sharing of private journal content
+Adoption
+At least 40% of eligible beta users start Chapter generation.
+At least 80% of started generations complete.
+At least 60% of completed Chapters are reviewed.
+At least 40% are downloaded.
+At least 60% retain the AI editorial layer.
+Quality
+At least 80% of reviewed Chapters are considered factually accurate.
+At least 60% feel more valuable than a chronological export.
+Fewer than 5% contain a confirmed invented material fact.
+Fewer than 20% require substantial rewriting.
+At least 50% help users notice or remember something meaningful.
+Media
+Photo-inclusive Chapters achieve higher review or download rates than text-only Chapters.
+At least 70% of users keep their photographs in the final output.
+Fewer than 1% of generated pages contain a media-layout defect.
+Reliability
+At least 98% of valid generation requests succeed.
+At least 99% of approved outputs generate a PDF successfully.
+No duplicate AI billing occurs.
+Monthly Chapter generation completes in under 30 seconds at the median.
+Monthly PDF generation completes in under 15 seconds at the median.
+AI cost remains comfortably below planned revenue.
+Zero confirmed cross-user data exposures.
+Monetisation evidence
+
+Before Build 4 pricing is finalised, determine:
+
+Whether AI editing is valued over chronological export
+Whether photographs increase perceived value
+Whether users prefer subscription or per-book payment
+Whether Monthly Chapters create recurring value
+Whether eligible users attempt or complete payment after seeing a realistic preview
