@@ -2,7 +2,7 @@ import type { RichEntryDocument } from "@/lib/rich-text";
 import type { HabitPreferences } from "@/types/habit";
 import type { EntryMedia } from "@/types/media";
 
-export type JournalLibraryView = "progress" | "calendar" | "history";
+export type JournalLibraryView = "progress" | "calendar" | "history" | "books";
 
 export interface HistoryFilters {
   query: string;
@@ -17,6 +17,7 @@ export interface HistoryEntrySummary {
   updatedAt: string;
   wordCount: number;
   media?: EntryMedia | null;
+  title?: string;
 }
 
 export interface HistoryPage {
@@ -33,6 +34,7 @@ export interface PortableArchiveEntry {
   entryDate: string;
   updatedAt: string;
   wordCount: number;
+  title: string;
 }
 
 export interface PortablePromptAssignment {
@@ -69,4 +71,23 @@ export interface PortableArchiveMedia {
 export interface PortableArchiveV2 extends Omit<PortableArchiveV1, "version"> {
   media: PortableArchiveMedia[];
   version: 2;
+}
+
+export interface PortableArchiveV3 extends Omit<PortableArchiveV2, "version"> {
+  consents: Array<{
+    acceptedAt: string;
+    kind: string;
+    periodStart: string | null;
+    version: string;
+  }>;
+  publications: Array<{
+    approvedEditorial: Record<string, unknown> | null;
+    mode: "ai" | "original";
+    periodEnd: string;
+    periodStart: string;
+    scope: "annual" | "monthly";
+    state: string;
+    title: string;
+  }>;
+  version: 3;
 }

@@ -27,8 +27,8 @@ test("loads both complete legal documents from their Markdown sources", () => {
 
   expect(privacy.title).toBe("365x100 Privacy Policy");
   expect(terms.title).toBe("365x100 Private Beta Terms of Use");
-  expect(privacy.effectiveDate).toBe("18 August 2026");
-  expect(terms.effectiveDate).toBe("17 August 2026");
+  expect(privacy.effectiveDate).toBe("19 August 2026");
+  expect(terms.effectiveDate).toBe("19 August 2026");
   expect(privacy.sections).toHaveLength(13);
   expect(terms.sections).toHaveLength(13);
   expect(privacy.sections[0].text).toBe("1. Who may use the beta");

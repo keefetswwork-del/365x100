@@ -25,9 +25,12 @@ If Custom Reports is unavailable in the current dashboard, run the private snipp
 | `founder_system_health.sql` | `Founder - System Health` | Table or grouped chart |
 | `founder_writing_rhythm.sql` | `Founder - Writing Rhythm` | Table or grouped chart |
 | `founder_media_capacity.sql` | `Founder - Media Capacity` | Headline values |
+| `founder_publication_quality.sql` | `Founder - Publication Quality` | Headline values and quality gate |
 
 The report is manually refreshed. It does not send email reports or alter application data.
 
 The system-health block contains only closed feature and error codes retained for 90 days. The writing-year block contains email-level aggregate progress for private founder use, but no journal content or internal identifiers.
 
 The media-capacity block contains aggregate attachment counts, bytes, coarse failure totals and cleanup health. It never returns file contents, filenames, private paths, signed URLs, entry text or device details.
+
+The publication-quality block contains aggregate chapter states, token/cost totals, sanitized failures and founder feedback. It never returns journal text, entry or chapter titles, editorial output, source references, prompts, private media or provider response bodies.

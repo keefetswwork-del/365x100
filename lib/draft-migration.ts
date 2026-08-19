@@ -21,12 +21,14 @@ export type AnonymousMigrationDecision = "confirmed" | "conflict" | "upload";
 export function decideAnonymousMigration(
   localContent: string,
   remoteContent: string | null,
+  localTitle = "",
+  remoteTitle = "",
 ): AnonymousMigrationDecision {
   if (remoteContent === null) {
     return "upload";
   }
 
-  return remoteContent === localContent ? "confirmed" : "conflict";
+  return remoteContent === localContent && remoteTitle === localTitle ? "confirmed" : "conflict";
 }
 
 export async function migrateAnonymousEntries(
@@ -46,12 +48,15 @@ export async function migrateAnonymousEntries(
     const decision = decideAnonymousMigration(
       local.content,
       remote?.content ?? null,
+      local.title,
+      remote?.title ?? "",
     );
     if (decision === "conflict" && remote) {
       conflicts.push({
         entryDate: local.entryDate,
         localContent: local.content,
         localRichContent: local.richContent,
+        localTitle: local.title,
         remote,
       });
       continue;
@@ -68,6 +73,7 @@ export async function migrateAnonymousEntries(
       entryDate: local.entryDate,
       expectedVersion: 0,
       richContent: local.richContent,
+      title: local.title,
       wordCount: countWords(local.content),
     });
 
@@ -76,6 +82,7 @@ export async function migrateAnonymousEntries(
         entryDate: local.entryDate,
         localContent: local.content,
         localRichContent: local.richContent,
+        localTitle: local.title,
         remote: result.remote,
       });
       continue;
@@ -104,16 +111,17 @@ export async function reconcileDirtyCaches(
 
   for (const cache of dirtyCaches) {
     const remote = remoteByDate.get(cache.entryDate) ?? null;
-    if (remote?.content === cache.content) {
+    if (remote?.content === cache.content && remote.title === cache.title) {
       saveCloudCache(userId, cacheFromCloudEntry(remote));
       continue;
     }
 
-    if (remote && remote.version !== cache.version && remote.content !== cache.content) {
+    if (remote && remote.version !== cache.version && (remote.content !== cache.content || remote.title !== cache.title)) {
       conflicts.push({
         entryDate: cache.entryDate,
         localContent: cache.content,
         localRichContent: cache.richContent,
+        localTitle: cache.title,
         remote,
       });
       continue;
@@ -124,6 +132,7 @@ export async function reconcileDirtyCaches(
       entryDate: cache.entryDate,
       expectedVersion: remote?.version ?? 0,
       richContent: cache.richContent,
+      title: cache.title ?? "",
       wordCount: cache.wordCount,
     });
     if (result.status === "saved") {
@@ -133,6 +142,7 @@ export async function reconcileDirtyCaches(
         entryDate: cache.entryDate,
         localContent: cache.content,
         localRichContent: cache.richContent,
+        localTitle: cache.title,
         remote: result.remote,
       });
     }

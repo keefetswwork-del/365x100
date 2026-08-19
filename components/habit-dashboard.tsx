@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { PrivatePhoto } from "@/components/private-photo";
+import { BooksView } from "@/components/books-view";
 import type { Database } from "@/lib/database.types";
 import { buildCalendarGrid, formatMonth, monthStart, shiftDate } from "@/lib/habit";
 import { mergeHistoryPages } from "@/lib/history";
@@ -38,6 +39,7 @@ const TABS: Array<{ label: string; value: JournalLibraryView }> = [
   { label: "Progress", value: "progress" },
   { label: "Calendar", value: "calendar" },
   { label: "History", value: "history" },
+  { label: "Books", value: "books" },
 ];
 
 function stateClass(state: ReturnType<typeof buildCalendarGrid>[number]["state"]): string {
@@ -253,11 +255,11 @@ export function HabitDashboard({
           <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Close</button>
         </div>
 
-        <div role="tablist" aria-label="Journal library views" className="mt-6 grid grid-cols-3 rounded-full border border-[var(--line)] bg-white/45 p-1">
+        <div role="tablist" aria-label="Journal library views" className="mt-6 grid grid-cols-2 rounded-[1.4rem] border border-[var(--line)] bg-white/45 p-1 sm:grid-cols-4 sm:rounded-full">
           {TABS.map((tab) => <button key={tab.value} type="button" role="tab" aria-selected={activeView === tab.value} onClick={() => setActiveView(tab.value)} className={`min-h-11 rounded-full px-3 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${activeView === tab.value ? "bg-[var(--ink)] text-white" : "text-[var(--muted)]"}`}>{tab.label}</button>)}
         </div>
 
-        {summary && (
+        {summary && activeView !== "books" && (
           <section className="mt-4 rounded-2xl border border-[var(--line)] bg-white/45 p-4" aria-labelledby="earlier-memory-title">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <label className="min-w-0 flex-1 text-xs font-bold uppercase tracking-wider text-[var(--muted)]" htmlFor="earlier-memory-date">
@@ -272,10 +274,10 @@ export function HabitDashboard({
           </section>
         )}
 
-        {loading && activeView !== "history" && <p className="mt-8 text-sm font-semibold text-[var(--muted)]" role="status">Loading your progress…</p>}
-        {!loading && !summary && activeView !== "history" && <p className="mt-8 rounded-2xl bg-white/55 p-5 text-sm text-[var(--muted)]" role="status">Progress is unavailable right now. Your editor and saved writing are still safe.</p>}
+        {loading && activeView !== "history" && activeView !== "books" && <p className="mt-8 text-sm font-semibold text-[var(--muted)]" role="status">Loading your progress…</p>}
+        {!loading && !summary && activeView !== "history" && activeView !== "books" && <p className="mt-8 rounded-2xl bg-white/55 p-5 text-sm text-[var(--muted)]" role="status">Progress is unavailable right now. Your editor and saved writing are still safe.</p>}
 
-        {summary && activeView === "progress" && <ProgressView summary={summary} writingYearSummary={writingYearSummary} />}
+        {summary && activeView === "progress" && <ProgressView onOpenBooks={() => setActiveView("books")} summary={summary} writingYearSummary={writingYearSummary} />}
         {summary && activeView === "calendar" && (
           <CalendarView
             canMoveForward={canMoveForward}
@@ -330,6 +332,7 @@ export function HabitDashboard({
                     {client && entry.media && <PrivatePhoto client={client} media={entry.media} alt={`Photo for ${historyDate(entry.entryDate)}`} className="h-24 w-24 shrink-0 rounded-xl object-cover" />}
                     <button type="button" onClick={() => onSelectDate(entry.entryDate)} className="min-w-0 flex-1 rounded-xl px-2 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
                       <span className="flex flex-wrap items-center justify-between gap-2"><strong>{historyDate(entry.entryDate)}</strong><span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-wider ${entry.completed ? "bg-[var(--accent)] text-white" : "bg-[var(--sage)]/45 text-[var(--ink)]"}`}>{entry.completed ? "100-word goal" : "Memory saved"}</span></span>
+                      {entry.title && <span className="mt-1 block font-serif text-xl leading-tight text-[var(--ink)]">{entry.title}</span>}
                       <span className="mt-1 block text-xs font-semibold text-[var(--muted)]">{entry.wordCount} {entry.wordCount === 1 ? "word" : "words"}</span>
                       <span className="mt-2 line-clamp-2 block text-sm leading-6 text-[var(--muted)]">{entry.excerpt || "This entry has no words yet."}</span>
                     </button>
@@ -340,6 +343,7 @@ export function HabitDashboard({
             {historyPage?.hasMore && <button type="button" disabled={historyLoading} onClick={() => void loadMoreHistory()} className="mt-5 min-h-11 w-full rounded-full border border-[var(--line)] bg-white/50 px-5 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50">{historyLoading ? "Loading…" : "Load older entries"}</button>}
           </section>
         )}
+        {activeView === "books" && client && <BooksView client={client} online={!cachedHistoryOnly} />}
       </section>
     </div>
   );
@@ -354,7 +358,7 @@ function formatWritingYearDate(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function ProgressView({ summary, writingYearSummary }: { summary: HabitSummary; writingYearSummary: WritingYearSummary | null }) {
+function ProgressView({ onOpenBooks, summary, writingYearSummary }: { onOpenBooks: () => void; summary: HabitSummary; writingYearSummary: WritingYearSummary | null }) {
   const recentDate = summary.mostRecentWritingDate ? historyDate(summary.mostRecentWritingDate) : "Your first memory awaits";
   const currentMonth = formatMonth(monthStart(summary.today));
   return <div role="tabpanel" className="mt-7">
@@ -382,7 +386,7 @@ function ProgressView({ summary, writingYearSummary }: { summary: HabitSummary; 
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Your date range stays fixed, while every memory you add becomes part of your Personal Year.</p>
       </div>}
     </section>
-    <section className="mt-5 rounded-[1.5rem] border border-[var(--line)] bg-white/55 p-5 sm:p-6" aria-labelledby="monthly-chapter-progress"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">{currentMonth} chapter</p><h3 id="monthly-chapter-progress" className="mt-2 font-serif text-3xl">{summary.monthlyChapterEligible ? "This month has qualified." : `${summary.monthWritingDays} of 10 writing days`}</h3><progress className="writing-progress mt-4 block" max={10} value={Math.min(summary.monthWritingDays, 10)} aria-label={`${summary.monthWritingDays} of 10 writing days for the monthly chapter`} /><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{summary.monthlyChapterEligible ? "Your chapter can be created after the calendar month ends in a future release." : `${summary.monthlyChapterDaysRemaining} more ${summary.monthlyChapterDaysRemaining === 1 ? "day" : "days"} will qualify this month. Every entry remains safely in your journal either way.`}</p></section>
+    <section className="mt-5 rounded-[1.5rem] border border-[var(--line)] bg-white/55 p-5 sm:p-6" aria-labelledby="monthly-chapter-progress"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">{currentMonth} chapter</p><h3 id="monthly-chapter-progress" className="mt-2 font-serif text-3xl">{summary.monthlyChapterEligible ? "This month has qualified." : `${summary.monthWritingDays} of 10 writing days`}</h3><progress className="writing-progress mt-4 block" max={10} value={Math.min(summary.monthWritingDays, 10)} aria-label={`${summary.monthWritingDays} of 10 writing days for the monthly chapter`} /><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{summary.monthlyChapterEligible ? "Your chapter can be created after the calendar month ends." : `${summary.monthlyChapterDaysRemaining} more ${summary.monthlyChapterDaysRemaining === 1 ? "day" : "days"} will qualify this month. Every entry remains safely in your journal either way.`}</p><button type="button" onClick={onOpenBooks} className="mt-4 min-h-11 rounded-full border border-[var(--ink)] px-5 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Open Books</button></section>
     {writingYearSummary?.hasWritingYear && <section className="mt-5 rounded-[1.5rem] border border-[var(--line)] bg-white/55 p-5 sm:p-6" aria-labelledby="annual-book-progress"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--accent-dark)]">Annual Book eligibility</p><h3 id="annual-book-progress" className="mt-2 font-serif text-3xl">{writingYearSummary.annualBookEligible ? "Your year can become a book." : `${writingYearSummary.writingDays} of 60 writing days`}</h3><progress className="writing-progress mt-4 block" max={60} value={Math.min(writingYearSummary.writingDays, 60)} aria-label={`${writingYearSummary.writingDays} of 60 writing days for Annual Book eligibility`} /><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{writingYearSummary.annualBookEligible ? "Your Annual Book can be generated after Day 365 ends in a future release." : `${writingYearSummary.annualBookDaysRemaining} more ${writingYearSummary.annualBookDaysRemaining === 1 ? "day" : "days"} will qualify this Personal Year. Monthly chapter eligibility does not affect this progress.`}</p></section>}
     <details className="mt-5 rounded-2xl border border-[var(--line)] bg-white/40 p-4"><summary className="cursor-pointer rounded-sm text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Optional streak and 100-word statistics</summary><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"><p><strong className="block font-serif text-2xl">{summary.currentStreak}</strong><span className="text-xs text-[var(--muted)]">current streak</span></p><p><strong className="block font-serif text-2xl">{summary.longestStreak}</strong><span className="text-xs text-[var(--muted)]">longest streak</span></p><p><strong className="block font-serif text-2xl">{summary.monthCompletedDays}</strong><span className="text-xs text-[var(--muted)]">100-word goals this month</span></p><p><strong className="block font-serif text-2xl">{summary.yearCompletedDays}</strong><span className="text-xs text-[var(--muted)]">100-word goals this calendar year</span></p></div></details>
     <section className="mt-5 overflow-hidden rounded-[1.5rem] bg-[var(--ink)] p-5 text-white sm:flex sm:items-center sm:justify-between sm:gap-8 sm:p-6">

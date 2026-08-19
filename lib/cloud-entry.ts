@@ -33,6 +33,7 @@ function mapEntry(row: EntryRow): CloudEntry {
     createdAt: row.created_at,
     entryDate: row.entry_date,
     id: row.id,
+    title: row.title,
     updatedAt: row.updated_at,
     userId: row.user_id,
     version: row.version,
@@ -73,6 +74,7 @@ function parseEntry(value: Json | undefined): CloudEntry | null {
     typeof row.id !== "string" ||
     typeof row.user_id !== "string" ||
     typeof row.entry_date !== "string" ||
+    (row.title !== undefined && typeof row.title !== "string") ||
     typeof row.content !== "string" ||
     typeof row.word_count !== "number" ||
     typeof row.version !== "number" ||
@@ -195,22 +197,17 @@ export async function saveCloudEntry(
     wordCount: number;
     expectedVersion: number;
     richContent: RichEntryDocument | null;
+    title?: string;
   },
 ): Promise<SaveEntryResult> {
-  const request = input.richContent
-    ? client.rpc("save_rich_entry", {
-        p_content: input.content,
-        p_content_rich: asDatabaseJson(input.richContent)!,
-        p_entry_date: input.entryDate,
-        p_expected_version: input.expectedVersion,
-        p_word_count: input.wordCount,
-      })
-    : client.rpc("save_entry", {
-        p_content: input.content,
-        p_entry_date: input.entryDate,
-        p_expected_version: input.expectedVersion,
-        p_word_count: input.wordCount,
-      });
+  const request = client.rpc("save_entry_with_title", {
+    p_content: input.content,
+    p_content_rich: asDatabaseJson(input.richContent),
+    p_entry_date: input.entryDate,
+    p_expected_version: input.expectedVersion,
+    p_title: (input.title ?? "").slice(0, 120),
+    p_word_count: input.wordCount,
+  });
   const { data, error } = await request;
   if (error || !data || !isObject(data)) {
     throw new CloudRequestError("Entry could not be saved.");

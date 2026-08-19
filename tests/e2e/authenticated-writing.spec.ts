@@ -63,9 +63,12 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
 }) => {
   const email = `writer-${Date.now()}@example.com`;
   const editor = page.getByLabel("Your entry for today");
+  const title = page.getByLabel("Entry title (optional)");
   const originalDraft = "A private moment written before creating an account.";
+  const originalTitle = "The day the account began";
 
   await page.goto("/");
+  await title.fill(originalTitle);
   await editor.fill(originalDraft);
   await editor.press(process.platform === "darwin" ? "Meta+A" : "Control+A");
   await page.getByRole("button", { name: "Bold" }).click();
@@ -76,6 +79,7 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
   await expect(page.getByRole("dialog", { name: "When does your day end?" })).toBeVisible();
   await expect(editor).toHaveText(originalDraft);
   await expect(editor.locator("strong")).toHaveText(originalDraft);
+  await expect(title).toHaveValue(originalTitle);
   await page.getByRole("button", { name: /^Use / }).click();
   await expect(page.getByRole("dialog", { name: "See the week you wrote." })).toBeVisible();
   await page.getByRole("button", { name: "Not now" }).click();
@@ -87,6 +91,7 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
 
   await page.reload();
   await expect(editor).toHaveText(originalDraft);
+  await expect(title).toHaveValue(originalTitle);
 
   const secondContext = await browser.newContext();
   const secondPage = await newPage(secondContext);
@@ -94,6 +99,7 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
   const secondEditor = secondPage.getByLabel("Your entry for today");
   await expect(secondEditor).toHaveText(originalDraft);
   await expect(secondEditor.locator("strong")).toHaveText(originalDraft);
+  await expect(secondPage.getByLabel("Entry title (optional)")).toHaveValue(originalTitle);
 
   const firstUpdate = `${originalDraft} First device update.`;
   await editor.fill(firstUpdate);

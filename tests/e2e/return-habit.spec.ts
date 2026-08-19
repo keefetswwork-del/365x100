@@ -274,7 +274,7 @@ test("configures return habits, persists prompts, and safely edits past entries"
     expect(archivePath).not.toBeNull();
     const archiveFiles = unzipSync(new Uint8Array(readFileSync(archivePath!)));
     const archive = JSON.parse(new TextDecoder().decode(archiveFiles["365x100-data.json"])) as Record<string, unknown>;
-    expect(archive).toMatchObject({ format: "365x100-portable-archive", version: 2 });
+    expect(archive).toMatchObject({ format: "365x100-portable-archive", version: 3 });
     expect(JSON.stringify(archive)).toContain(updatedPastEntry);
     expect(JSON.stringify(archive)).toContain("contentRich");
     expect(JSON.stringify(archive)).not.toContain(userId);

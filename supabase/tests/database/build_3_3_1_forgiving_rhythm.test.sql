@@ -21,7 +21,7 @@ values
 
 insert into public.profiles (user_id, timezone)
 values
-  ('00000000-0000-0000-0000-00000000331a', 'UTC'),
+  ('00000000-0000-0000-0000-00000000331a', 'Pacific/Honolulu'),
   ('00000000-0000-0000-0000-00000000331b', 'UTC');
 
 set local role authenticated;
@@ -143,8 +143,24 @@ select is(public.get_writing_year_dashboard()->>'annualBookEligible', 'true', '6
 select is((public.get_writing_year_dashboard()->>'annualBookDaysRemaining')::integer, 0, 'eligible Personal Years have no remaining writing days');
 select is((public.get_writing_year_dashboard()->>'completedDays')::integer, 0, 'legacy 100-word completion remains separate from writing days');
 select is((public.get_habit_dashboard('2026-08-01')->>'currentStreak')::integer, 0, 'legacy streaks still require the 100-word goal');
+reset role;
+insert into auth.users (id, email, aud, role, created_at, updated_at)
+values ('00000000-0000-0000-0000-00000000331c', 'rhythm-window@example.com', 'authenticated', 'authenticated', now(), now());
+insert into public.profiles (user_id, timezone)
+values ('00000000-0000-0000-0000-00000000331c', 'Asia/Singapore');
+insert into public.entries (user_id, entry_date, content, word_count)
+select
+  '00000000-0000-0000-0000-00000000331c',
+  (now() at time zone 'Asia/Singapore')::date - day_offset,
+  'recent memory ' || day_offset,
+  3
+from generate_series(0, 6) as day_offset
+on conflict (user_id, entry_date) do update set content = excluded.content, word_count = excluded.word_count;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000331c', true);
 select is((public.get_habit_dashboard('2026-08-01')->>'lastSevenWritingDays')::integer, 7, 'the previous seven calendar days count distinct visible entries');
 reset role;
+delete from auth.users where id = '00000000-0000-0000-0000-00000000331c';
 
 select is(
   (select count(*)::integer from public.product_events

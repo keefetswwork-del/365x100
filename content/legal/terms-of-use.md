@@ -1,6 +1,6 @@
 # 365x100 Private Beta Terms of Use
 
-**Effective date: 17 August 2026**
+**Effective date: 19 August 2026**
 
 These Terms govern your use of the 365x100 private beta ("365x100", the "Service", "we", "us" or "our"). 365x100 is independently operated from Singapore.
 
@@ -10,7 +10,7 @@ By creating an account or using the Service, you agree to these Terms and the [3
 
 365x100 is a pre-release daily-writing service. It allows eligible users to write, format, save, search and export private journal entries and view writing progress.
 
-The beta is currently free. Stripe is not enabled, and no paid subscription, printed book, AI summary or future feature is included.
+The beta is currently free. Stripe is not enabled, and no paid subscription or printed book is included. Eligible users may create original-entry monthly chapters. AI-edited chapters are a limited, founder-enabled beta and are not guaranteed.
 
 Features may change, fail or be removed during testing. Access may be limited or ended at any time.
 
@@ -31,11 +31,13 @@ You must provide accurate account information, protect access to your email and 
 
 ## 4. Your journal entries
 
-You retain ownership of the journal entries and other original content you create.
+You retain ownership of the journal entries, photographs, entry titles, editorial changes and other original content you create. As between you and 365x100, you also own the generated chapter output created for your account, subject to any rights in your source material and applicable law.
 
 You give us a limited licence to host, store, process, synchronise, display, search and export that content only as needed to operate and secure the Service, provide support and comply with law.
 
 We do not own your journal entries or have permission to sell them, publish them, use them for advertising or train AI models on them.
+
+If you request AI editing, you give us a limited licence to send the selected month’s dates, titles and plain journal text to the disclosed AI processor solely to create and validate that chapter. Photographs are excluded from AI processing. AI output may contain errors or omissions. You are responsible for reviewing it before approval, download, printing or sharing. Deleting generated output does not delete your source entries or photographs.
 
 ## 5. Acceptable use
 
@@ -51,11 +53,13 @@ You must not:
 
 Private entries are not routinely monitored. We may investigate and act when misuse comes to our attention.
 
-## 6. Saving and exports
+## 6. Saving, chapters and exports
 
 The Service attempts to save entries automatically, but no online service can guarantee that data will never be lost. Unsynchronised browser drafts may be lost if you clear browser data, change devices or use private-browsing mode.
 
 You should use the available export tools to keep a separate copy of writing that is important to you.
+
+Original-entry and AI-edited chapter previews and PDFs are generated from the journal state available when requested. Source changes may make an approved AI editorial layer stale and pause AI PDF download until you regenerate it or choose original-only mode. Generated PDFs are not stored by the Service.
 
 ## 7. No emergency or professional service
 

@@ -1,6 +1,6 @@
 # 365x100 Privacy Policy
 
-**Effective date: 18 August 2026**
+**Effective date: 19 August 2026**
 
 365x100 is an independently operated private beta service administered from Singapore ("365x100", "we", "us" or "our"). This Policy explains how we handle personal data when you use the beta.
 
@@ -19,6 +19,7 @@ We may collect and store:
 - Your email address, account identifier and authentication information.
 - Basic profile information supplied by Google if you choose Google sign-in.
 - Journal entries, rich-text formatting, entry dates, word counts and completion status.
+- Optional entry titles and user-owned chapter editorial drafts.
 - Optional photographs attached to journal entries, together with processed dimensions and file size.
 - Your timezone, prompt preferences and optional weekly-review preferences.
 - Streaks, writing statistics, allow-listed writing milestones and email-delivery diagnostics.
@@ -50,7 +51,9 @@ We use information to:
 
 Journal entries and attached photographs are private to your account by default. We do not routinely read or view them, sell them, use them for advertising, publish them, analyse photographs with artificial intelligence or use journal content or photographs to train artificial-intelligence models.
 
-365x100 does not currently generate AI summaries or process payments.
+Eligible users may create monthly chapters from their original entries. Founder-enabled beta users may separately choose AI editorial processing for a specific month. Before the first request for a month, we identify OpenAI as the processor and ask for dedicated consent. We send only that month’s entry dates, titles and authoritative plain text, together with opaque source references. We do not send photographs, rich-format documents, filenames, signed URLs, user identifiers, email addresses or unrelated profile data. Requests use API controls that disable application-state storage, but OpenAI may retain API data for abuse monitoring for up to 30 days. We do not permit OpenAI to use journal content to train its models.
+
+Journal text is treated as source material rather than instructions. Automated checks validate generated source references and quotations against the original entries. AI-generated material can still be inaccurate, so users must review and approve it before an AI-edited PDF is made available. A user may remove any generated section, use an original-only chapter instead, or delete generated output without deleting source entries or photographs.
 
 ## 5. Service providers
 
@@ -60,6 +63,7 @@ We use service providers to operate the beta, including:
 - Google for Google sign-in, if selected.
 - Resend for authentication and optional weekly-review emails.
 - Render for website hosting and delivery.
+- OpenAI for optional, user-requested monthly editorial processing during the AI beta.
 
 We may also disclose information where required by law, reasonably necessary to protect the service or another person, or as part of a future incorporation or transfer of 365x100, subject to appropriate safeguards.
 
@@ -75,7 +79,7 @@ We may send authentication, security and service emails. Optional weekly writing
 
 ## 8. Retention and account deletion
 
-We retain account and journal information while your account is active and as reasonably necessary to operate and secure the beta.
+We retain account, journal and user-owned approved editorial information while your account is active and as reasonably necessary to operate and secure the beta. Generated PDFs are assembled on demand in your browser and are not retained by 365x100.
 
 Removing a photograph removes its live metadata immediately and schedules its private storage object for deletion. Deleting your account removes your account, journal entries, attached photographs and associated live data promptly. Deleted information may remain temporarily in protected backups until those backups are overwritten through normal retention cycles. Those copies are not available through the service or used for another purpose. Limited security or legal records may be retained where reasonably necessary.
 
@@ -90,6 +94,7 @@ Contact [hello@365x100.com](mailto:hello@365x100.com) promptly if you suspect un
 You may:
 
 - Access, edit, search and export your entries.
+- Create, edit, approve, export or delete generated chapter output without deleting source entries.
 - Add, replace, download or remove photographs attached to your entries.
 - Disable optional weekly reviews.
 - Delete your account.

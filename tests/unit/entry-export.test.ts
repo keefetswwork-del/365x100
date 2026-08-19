@@ -35,6 +35,7 @@ function entry(entryDate: string, content: string, wordCount: number): CloudEntr
     createdAt: "2026-08-17T09:00:00.000Z",
     entryDate,
     id: `entry-${entryDate}`,
+    title: `Title ${entryDate}`,
     richContent,
     updatedAt: "2026-08-17T10:00:00.000Z",
     userId: "private-user-id",
@@ -118,6 +119,7 @@ test("creates a ZIP with every photo once and no private storage details", async
   };
   const photo = new Blob([new Uint8Array([82, 73, 70, 70])], { type: "image/webp" });
   const client = {
+    rpc: async () => ({ data: { consents: [], publications: [] }, error: null }),
     from: () => ({
       select: () => ({
         order: () => ({ range: async () => ({ data: [], error: null }) }),
@@ -139,7 +141,7 @@ test("creates a ZIP with every photo once and no private storage details", async
   const serialized = JSON.stringify(manifest);
 
   expect(Object.keys(files).sort()).toEqual(["365x100-data.json", "photos/2026-08-17.webp"]);
-  expect(manifest).toMatchObject({ format: "365x100-portable-archive", version: 2 });
+  expect(manifest).toMatchObject({ consents: [], format: "365x100-portable-archive", publications: [], version: 3 });
   expect(serialized).toContain("photos/2026-08-17.webp");
   expect(serialized).not.toContain("private-user-id");
   expect(serialized).not.toContain("media-private-id");
@@ -160,6 +162,7 @@ test("streams a portable ZIP sequentially without retaining private paths", asyn
     width: 1,
   };
   const client = {
+    rpc: async () => ({ data: { consents: [], publications: [] }, error: null }),
     from: () => ({ select: () => ({ order: () => ({ range: async () => ({ data: [], error: null }) }) }) }),
     storage: { from: () => ({ download: async () => ({ data: new Blob(["RIFF"], { type: "image/webp" }), error: null }) }) },
   };

@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from "@/lib/database.types";
+import type { Database, Json } from "@/lib/database.types";
 import type { CloudEntry, Profile } from "@/types/cloud";
 import type { HabitPreferences } from "@/types/habit";
 import type {
   PortableArchiveV1,
   PortableArchiveV2,
+  PortableArchiveV3,
   PortablePromptAssignment,
 } from "@/types/history";
 import { strToU8, Zip, zip, ZipPassThrough } from "fflate";
@@ -46,6 +47,7 @@ export function serializePlainTextEntries(entries: CloudEntry[]): string {
   const ordered = [...byDate.values()].sort((a, b) => a.entryDate.localeCompare(b.entryDate));
   const body = ordered.map((entry) => [
     readableDate(entry.entryDate),
+    ...(entry.title ? [entry.title] : []),
     `${entry.wordCount} ${entry.wordCount === 1 ? "word" : "words"}`,
     "-".repeat(48),
     entry.content,
@@ -131,6 +133,7 @@ export function createPortableArchive(
         entryDate: entry.entryDate,
         updatedAt: entry.updatedAt,
         wordCount: entry.wordCount,
+        title: entry.title ?? "",
       })),
     exportedAt,
     format: "365x100-portable-archive",
@@ -164,12 +167,47 @@ function portableMedia(entries: CloudEntry[]): PortableArchiveV2["media"] {
       byteSize: entry.media.byteSize,
       createdAt: entry.media.createdAt,
       entryDate: entry.entryDate,
+      title: entry.title,
       file: `photos/${entry.entryDate}.webp`,
       height: entry.media.height,
       mimeType: "image/webp" as const,
       updatedAt: entry.media.updatedAt,
       width: entry.media.width,
     }] : []);
+}
+
+function isRecord(value: Json | undefined): value is Record<string, Json | undefined> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function fetchPortablePublicationData(client: Client): Promise<Pick<PortableArchiveV3, "consents" | "publications">> {
+  const { data, error } = await client.rpc("get_portable_publication_data");
+  if (error || !data || !isRecord(data) || !Array.isArray(data.publications) || !Array.isArray(data.consents)) {
+    throw new Error("Publication data could not be exported.");
+  }
+  return {
+    consents: data.consents.flatMap((item) => {
+      const row = isRecord(item) ? item : null;
+      return row && typeof row.kind === "string" && typeof row.version === "string" && typeof row.acceptedAt === "string"
+        ? [{ acceptedAt: row.acceptedAt, kind: row.kind, periodStart: typeof row.periodStart === "string" ? row.periodStart : null, version: row.version }]
+        : [];
+    }),
+    publications: data.publications.flatMap((item) => {
+      const row = isRecord(item) ? item : null;
+      return row && (row.scope === "monthly" || row.scope === "annual") && (row.mode === "ai" || row.mode === "original")
+        && typeof row.periodStart === "string" && typeof row.periodEnd === "string" && typeof row.title === "string"
+        ? [{
+          approvedEditorial: isRecord(row.approvedEditorial) ? row.approvedEditorial as Record<string, unknown> : null,
+          mode: row.mode,
+          periodEnd: row.periodEnd,
+          periodStart: row.periodStart,
+          scope: row.scope,
+          state: typeof row.state === "string" ? row.state : "",
+          title: row.title,
+        }]
+        : [];
+    }),
+  };
 }
 
 export function portableZipByteEstimate(entries: CloudEntry[]): number {
@@ -247,6 +285,7 @@ export async function buildPortableZip(
   },
 ): Promise<Blob> {
   const promptAssignments = await fetchPromptAssignments(client);
+  const publicationData = await fetchPortablePublicationData(client);
   const base = createPortableArchive(input, promptAssignments);
   const files: Record<string, Uint8Array> = {};
   const media = portableMedia(input.entries);
@@ -262,7 +301,7 @@ export async function buildPortableZip(
     files[filename] = new Uint8Array(await blob.arrayBuffer());
   }
 
-  const archive: PortableArchiveV2 = { ...base, media, version: 2 };
+  const archive: PortableArchiveV3 = { ...base, ...publicationData, media, version: 3 };
   files["365x100-data.json"] = strToU8(JSON.stringify(archive, null, 2));
   const zipBytes = await zipFiles(files);
   const zipBuffer = new ArrayBuffer(zipBytes.byteLength);
@@ -281,10 +320,12 @@ export async function streamPortableZip(
   },
 ): Promise<void> {
   const promptAssignments = await fetchPromptAssignments(client);
-  const archive: PortableArchiveV2 = {
+  const publicationData = await fetchPortablePublicationData(client);
+  const archive: PortableArchiveV3 = {
     ...createPortableArchive(input, promptAssignments),
+    ...publicationData,
     media: portableMedia(input.entries),
-    version: 2,
+    version: 3,
   };
   const files = [...input.entries]
     .sort((a, b) => a.entryDate.localeCompare(b.entryDate))

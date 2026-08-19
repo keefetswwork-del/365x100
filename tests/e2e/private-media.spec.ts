@@ -119,7 +119,7 @@ test("keeps one private photo with the entry across writing, library, export and
   const files = unzipSync(new Uint8Array(readFileSync(path!)));
   expect(Object.keys(files)).toContain(`photos/${date}.webp`);
   const manifest = JSON.parse(new TextDecoder().decode(files["365x100-data.json"])) as Record<string, unknown>;
-  expect(manifest).toMatchObject({ format: "365x100-portable-archive", version: 2 });
+  expect(manifest).toMatchObject({ format: "365x100-portable-archive", version: 3 });
   expect(JSON.stringify(manifest)).not.toContain("storagePath");
   await account.getByRole("button", { name: "Close" }).click();
 

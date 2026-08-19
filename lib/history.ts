@@ -19,6 +19,7 @@ function parseHistoryItem(value: Json): HistoryEntrySummary | null {
   if (!isObject(value)) return null;
   if (
     typeof value.entryDate !== "string" ||
+    typeof value.title !== "string" ||
     typeof value.excerpt !== "string" ||
     typeof value.wordCount !== "number" ||
     typeof value.completed !== "boolean" ||
@@ -34,6 +35,7 @@ function parseHistoryItem(value: Json): HistoryEntrySummary | null {
     updatedAt: value.updatedAt,
     wordCount: value.wordCount,
     media: isObject(value.media) ? mapEntryMedia(value.media) : null,
+    title: value.title,
   };
 }
 
@@ -94,6 +96,7 @@ export function historyPageFromCloudCaches(caches: CloudEntryCache[]): HistoryPa
         updatedAt: cache.updatedAt,
         wordCount: cache.wordCount,
         media: null,
+        title: cache.title,
       }))
       .sort((left, right) => right.entryDate.localeCompare(left.entryDate)),
     nextCursor: null,

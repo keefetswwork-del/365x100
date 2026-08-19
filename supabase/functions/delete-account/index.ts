@@ -27,7 +27,7 @@ const deleteAccount = withSupabase(
     );
     if (pathError) {
       return Response.json(
-        { error: "Account deletion could not be completed." },
+        { code: "storage-paths", error: "Account deletion could not be completed." },
         { status: 500 },
       );
     }
@@ -39,7 +39,7 @@ const deleteAccount = withSupabase(
         .remove(paths.slice(index, index + 100));
       if (storageError) {
         return Response.json(
-          { error: "Account deletion could not be completed." },
+          { code: "storage-delete", error: "Account deletion could not be completed." },
           { status: 500 },
         );
       }
@@ -48,7 +48,7 @@ const deleteAccount = withSupabase(
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId, false);
     if (error) {
       return Response.json(
-        { error: "Account deletion could not be completed." },
+        { code: "auth-delete", error: "Account deletion could not be completed." },
         { status: 500 },
       );
     }

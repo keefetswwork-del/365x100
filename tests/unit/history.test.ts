@@ -6,6 +6,7 @@ const first = {
   completed: true,
   entryDate: "2026-08-17",
   excerpt: "A recent memory",
+  title: "A remembered day",
   updatedAt: "2026-08-17T10:00:00.000Z",
   wordCount: 105,
 };

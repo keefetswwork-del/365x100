@@ -447,3 +447,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/cleanup-journal-media/deno.json"
 entrypoint = "./functions/cleanup-journal-media/index.ts"
+
+[functions.generate-publication]
+enabled = true
+verify_jwt = true
+import_map = "./functions/generate-publication/deno.json"
+entrypoint = "./functions/generate-publication/index.ts"

@@ -45,7 +45,7 @@ test("enumerates only valid anonymous entry keys in date order", () => {
   storage.setItem("unrelated", "ignored");
 
   expect(listEntries(storage)).toEqual([
-    { content: "first", entryDate: "2026-08-16", richContent: null },
-    { content: "second", entryDate: "2026-08-17", richContent: null },
+    { content: "first", entryDate: "2026-08-16", richContent: null, title: "" },
+    { content: "second", entryDate: "2026-08-17", richContent: null, title: "" },
   ]);
 });

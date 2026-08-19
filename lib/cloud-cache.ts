@@ -56,6 +56,7 @@ export function loadCloudCache(
         richContent && plainTextFromRichDocument(richContent) === parsed.content
           ? richContent
           : null,
+      title: typeof parsed.title === "string" ? parsed.title.slice(0, 120) : "",
     } as CloudEntryCache;
   } catch {
     return null;
@@ -83,6 +84,7 @@ export function cacheFromCloudEntry(entry: CloudEntry): CloudEntryCache {
   return {
     content: entry.content,
     richContent: entry.richContent,
+    title: entry.title ?? "",
     dirty: false,
     entryDate: entry.entryDate,
     updatedAt: entry.updatedAt,

@@ -37,6 +37,7 @@ export interface CloudEntry {
   createdAt: string;
   updatedAt: string;
   media?: EntryMedia | null;
+  title?: string;
 }
 
 export type SaveEntryResult =
@@ -47,6 +48,7 @@ export interface MigrationConflict {
   entryDate: string;
   localContent: string;
   localRichContent: RichEntryDocument | null;
+  localTitle?: string;
   remote: CloudEntry;
 }
 
@@ -54,6 +56,7 @@ export interface CloudEntryCache {
   entryDate: string;
   content: string;
   richContent: RichEntryDocument | null;
+  title?: string;
   wordCount: number;
   version: number;
   dirty: boolean;
@@ -64,6 +67,7 @@ export interface PendingCloudSave {
   entryDate: string;
   content: string;
   richContent: RichEntryDocument | null;
+  title?: string;
   wordCount: number;
   expectedVersion: number;
 }

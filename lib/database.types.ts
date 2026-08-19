@@ -125,6 +125,7 @@ export type Database = {
           created_at: string
           entry_date: string
           id: string
+          title: string
           updated_at: string
           user_id: string
           version: number
@@ -138,6 +139,7 @@ export type Database = {
           created_at?: string
           entry_date: string
           id?: string
+          title?: string
           updated_at?: string
           user_id: string
           version?: number
@@ -151,6 +153,7 @@ export type Database = {
           created_at?: string
           entry_date?: string
           id?: string
+          title?: string
           updated_at?: string
           user_id?: string
           version?: number
@@ -685,6 +688,44 @@ export type Database = {
           p_expected_version: number
           p_word_count: number
         }
+        Returns: Json
+      }
+      save_entry_with_title: {
+        Args: {
+          p_content: string
+          p_content_rich: Json | null
+          p_entry_date: string
+          p_expected_version: number
+          p_title: string
+          p_word_count: number
+        }
+        Returns: Json
+      }
+      accept_ai_processing: { Args: { p_publication_id: string }; Returns: Json }
+      approve_publication: { Args: { p_publication_id: string }; Returns: Json }
+      create_monthly_publication: {
+        Args: { p_mode?: string; p_month: string }
+        Returns: Json
+      }
+      delete_publication: { Args: { p_publication_id: string }; Returns: boolean }
+      get_publication_document: { Args: { p_publication_id: string }; Returns: Json }
+      get_publication_library: { Args: never; Returns: Json }
+      get_portable_publication_data: { Args: never; Returns: Json }
+      record_publication_feedback: {
+        Args: { p_publication_id: string; p_verdict: string }
+        Returns: boolean
+      }
+      record_publication_event: {
+        Args: { p_event_name: string; p_publication_id?: string | null }
+        Returns: boolean
+      }
+      refresh_publication_sources: { Args: { p_publication_id: string }; Returns: Json }
+      save_publication_draft: {
+        Args: { p_editorial: Json; p_publication_id: string; p_title: string }
+        Returns: Json
+      }
+      set_publication_cover: {
+        Args: { p_media_id: string | null; p_publication_id: string }
         Returns: Json
       }
       set_habit_preferences: {

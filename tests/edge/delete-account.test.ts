@@ -129,7 +129,8 @@ test("requires authentication and permanently deletes only the caller", async ()
       headers,
       body: JSON.stringify({ confirmation: "DELETE", userId: userB.id }),
     });
-    expect(deletion.status).toBe(204);
+    const deletionBody = await deletion.text();
+    expect(deletion.status, deletionBody).toBe(204);
 
     const callerLookup = await admin.auth.admin.getUserById(userA.id);
     const otherLookup = await admin.auth.admin.getUserById(userB.id);

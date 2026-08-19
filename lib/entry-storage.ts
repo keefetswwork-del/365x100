@@ -6,6 +6,7 @@ import {
 
 export const ENTRY_KEY_PREFIX = "365x100:entry:";
 export const RICH_ENTRY_KEY_PREFIX = "365x100:entry-rich:";
+export const ENTRY_TITLE_KEY_PREFIX = "365x100:entry-title:";
 const ENTRY_KEY_PATTERN = /^365x100:entry:(\d{4}-\d{2}-\d{2})$/;
 
 type EntryStorage = Pick<Storage, "getItem" | "setItem">;
@@ -28,6 +29,36 @@ export function getEntryStorageKey(localDate: string): string {
 
 export function getRichEntryStorageKey(localDate: string): string {
   return `${RICH_ENTRY_KEY_PREFIX}${localDate}`;
+}
+
+export function getEntryTitleStorageKey(localDate: string): string {
+  return `${ENTRY_TITLE_KEY_PREFIX}${localDate}`;
+}
+
+export function loadEntryTitle(
+  localDate: string,
+  storage: EntryStorage | null = getBrowserStorage(),
+): string {
+  if (!storage) return "";
+  try {
+    return (storage.getItem(getEntryTitleStorageKey(localDate)) ?? "").slice(0, 120);
+  } catch {
+    return "";
+  }
+}
+
+export function saveEntryTitle(
+  localDate: string,
+  title: string,
+  storage: EntryStorage | null = getBrowserStorage(),
+): boolean {
+  if (!storage) return false;
+  try {
+    storage.setItem(getEntryTitleStorageKey(localDate), title.slice(0, 120));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function loadEntry(
@@ -93,6 +124,7 @@ export interface LocalEntry {
   entryDate: string;
   content: string;
   richContent: RichEntryDocument | null;
+  title: string;
 }
 
 export function listEntries(storage?: Storage): LocalEntry[] {
@@ -114,6 +146,7 @@ export function listEntries(storage?: Storage): LocalEntry[] {
         content: target.getItem(key) ?? "",
         entryDate: match[1],
         richContent: loadRichEntry(match[1], target),
+        title: loadEntryTitle(match[1], target),
       });
     }
   } catch {
@@ -132,6 +165,7 @@ export function removeEntry(localDate: string, storage?: Storage): boolean {
   try {
     target.removeItem(getEntryStorageKey(localDate));
     target.removeItem(getRichEntryStorageKey(localDate));
+    target.removeItem(getEntryTitleStorageKey(localDate));
     return true;
   } catch {
     return false;
