@@ -113,15 +113,81 @@ test("migrates an OTP draft, syncs devices, retries offline, and reviews conflic
   await expect(secondPage.getByText("Offline — saved on this device", { exact: true })).toBeVisible();
   await secondContext.setOffline(false);
   await expect(secondPage.getByText("Saved to cloud", { exact: true })).toBeVisible();
+  await expect.poll(() => secondPage.evaluate(() =>
+    Object.keys(localStorage).some((key) => key.includes(":account:v1")),
+  )).toBe(true);
+  await expect.poll(() => secondPage.evaluate((expected) =>
+    Object.entries(localStorage).some(([key, value]) => key.includes(":entry:") && value.includes(expected)),
+  offlineUpdate)).toBe(true);
+
+  await secondContext.route("http://127.0.0.1:54321/**", (route) => route.abort());
+  await secondContext.addInitScript(() => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
+  });
+  await secondPage.reload();
+  await expect(secondPage.getByRole("dialog", { name: "Before cloud saving continues." })).toBeHidden();
+  await expect(secondEditor).toHaveText(offlineUpdate);
+  await expect(secondPage.getByText("Offline — saved on this device", { exact: true })).toBeVisible();
+  await secondPage.getByLabel("Writing navigation").getByRole("button", { name: "Library" }).click();
+  await expect(secondPage.getByText("Cached entries on this device", { exact: true })).toBeVisible();
+  await expect(secondPage.getByLabel("Search your writing")).toBeDisabled();
+  await expect(secondPage.getByRole("button", { name: "Export all as text" })).toHaveCount(0);
+  await secondPage.getByRole("button", { name: new RegExp(offlineUpdate.slice(0, 24)) }).click();
+  await expect(secondEditor).toHaveText(offlineUpdate);
+
+  await secondContext.unroute("http://127.0.0.1:54321/**");
+  await secondPage.evaluate(() => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => true,
+    });
+    window.dispatchEvent(new Event("online"));
+  });
+  await expect(secondPage.getByText("Saved to cloud", { exact: true })).toBeVisible();
 
   await secondPage.getByLabel("Writing navigation").getByRole("button", { name: "Account" }).click();
   await secondPage.getByRole("button", { name: "Sign out" }).click();
   await expect(secondPage.getByRole("button", { name: "Sign in" })).toBeVisible();
 
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.includes(":account:v1")) localStorage.removeItem(key);
+    }
+  });
+  const firstContext = page.context();
+  await firstContext.route("http://127.0.0.1:54321/**", (route) => route.abort());
+  await firstContext.addInitScript(() => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
+  });
+  await page.reload();
+  await expect(page.getByRole("dialog", { name: "Connect once to finish loading this account." })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Before cloud saving continues." })).toBeHidden();
+  await firstContext.unroute("http://127.0.0.1:54321/**");
+  await page.evaluate(() => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => true,
+    });
+    window.dispatchEvent(new Event("online"));
+  });
+  await expect(page.getByRole("dialog", { name: "Connect once to finish loading this account." })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: "Choose the version to keep." })).toBeVisible();
+  await page.getByRole("button", { name: "Keep cloud version" }).click();
+  await expect(page.getByText("Saved to cloud", { exact: true })).toBeVisible();
+
   await page.getByLabel("Writing navigation").getByRole("button", { name: "Account" }).click();
   await page.getByLabel("Type DELETE to confirm account deletion").fill("DELETE");
   await page.getByRole("button", { name: "Permanently delete my account" }).click();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() =>
+    Object.keys(localStorage).filter((key) => key.includes(":account:v1")).length,
+  )).toBe(0);
 
   await secondContext.close();
 });

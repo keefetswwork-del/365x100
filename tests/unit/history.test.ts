@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { mergeHistoryPages, parseHistoryPage } from "../../lib/history";
+import { historyPageFromCloudCaches, mergeHistoryPages, parseHistoryPage } from "../../lib/history";
 
 const first = {
   completed: true,
@@ -36,4 +36,36 @@ test("merges pagination without duplicate dates and keeps newest first", () => {
   const updated = { ...first, excerpt: "Updated excerpt" };
 
   expect(mergeHistoryPages([first], [older, updated])).toEqual([updated, older]);
+});
+
+test("builds a clearly bounded offline history from cached entries", () => {
+  const page = historyPageFromCloudCaches([
+    {
+      content: "An older\n\nlocal memory",
+      dirty: false,
+      entryDate: "2026-08-17",
+      richContent: null,
+      updatedAt: "2026-08-17T10:00:00.000Z",
+      version: 1,
+      wordCount: 4,
+    },
+    {
+      content: "Newest cached memory",
+      dirty: true,
+      entryDate: "2026-08-18",
+      richContent: null,
+      updatedAt: "2026-08-18T10:00:00.000Z",
+      version: 2,
+      wordCount: 101,
+    },
+  ]);
+
+  expect(page).toEqual({
+    hasMore: false,
+    items: [
+      expect.objectContaining({ completed: true, entryDate: "2026-08-18", media: null }),
+      expect.objectContaining({ completed: false, entryDate: "2026-08-17", excerpt: "An older local memory", media: null }),
+    ],
+    nextCursor: null,
+  });
 });

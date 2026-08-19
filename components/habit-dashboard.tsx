@@ -13,6 +13,7 @@ import type { HabitSummary } from "@/types/habit";
 import type { HistoryEntrySummary, HistoryFilters, HistoryPage, JournalLibraryView } from "@/types/history";
 
 interface HabitDashboardProps {
+  cachedHistoryOnly: boolean;
   client: SupabaseClient<Database> | null;
   exportBlockedReason: string | null;
   initialView: JournalLibraryView;
@@ -66,6 +67,7 @@ function historyDate(entryDate: string): string {
 }
 
 export function HabitDashboard({
+  cachedHistoryOnly,
   client,
   exportBlockedReason,
   initialView,
@@ -167,7 +169,7 @@ export function HabitDashboard({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeView, deferredQuery, fromDate, open, toDate]);
+  }, [activeView, cachedHistoryOnly, deferredQuery, fromDate, open, toDate]);
 
   useEffect(() => {
     if (open && activeView === "progress") recordRhythmView();
@@ -290,26 +292,32 @@ export function HabitDashboard({
 
         {activeView === "history" && (
           <section role="tabpanel" className="mt-7">
+            {cachedHistoryOnly && (
+              <div className="rounded-2xl bg-[var(--sage)]/35 p-4" role="status">
+                <p className="font-bold">Cached entries on this device</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Reconnect for complete history, private search, photos and exports.</p>
+              </div>
+            )}
             <div className="rounded-[1.5rem] border border-[var(--line)] bg-white/55 p-4 sm:p-5">
               <label htmlFor="history-search" className="text-sm font-bold">Search your writing</label>
-              <input id="history-search" type="search" value={query} maxLength={200} onChange={(event) => setQuery(event.target.value)} placeholder="A person, place or remembered phrase…" className="mt-2 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]" />
+              <input id="history-search" type="search" value={query} maxLength={200} disabled={cachedHistoryOnly} onChange={(event) => setQuery(event.target.value)} placeholder="A person, place or remembered phrase…" className="mt-2 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50" />
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <label className="text-xs font-bold text-[var(--muted)]">From<input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]" /></label>
-                <label className="text-xs font-bold text-[var(--muted)]">To<input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]" /></label>
+                <label className="text-xs font-bold text-[var(--muted)]">From<input type="date" value={fromDate} max={toDate || undefined} disabled={cachedHistoryOnly} onChange={(event) => setFromDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50" /></label>
+                <label className="text-xs font-bold text-[var(--muted)]">To<input type="date" value={toDate} min={fromDate || undefined} disabled={cachedHistoryOnly} onChange={(event) => setToDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50" /></label>
               </div>
-              <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Search stays private to your account and is never placed in the page address or analytics.</p>
+              <p className="mt-3 text-xs leading-5 text-[var(--muted)]">{cachedHistoryOnly ? "Search and filters require a connection so partial results are never presented as complete." : "Search stays private to your account and is never placed in the page address or analytics."}</p>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            {!cachedHistoryOnly && <div className="mt-4 flex flex-wrap items-center gap-2">
               <button type="button" aria-pressed={selectionMode} onClick={() => setSelectionMode((current) => !current)} className="min-h-11 rounded-full border border-[var(--line)] bg-white/50 px-4 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">{selectionMode ? "Done selecting" : "Select entries"}</button>
               {(selectionMode || selectedEntries.size > 0) && <button type="button" disabled={selectedEntries.size === 0 || Boolean(exportBlockedReason) || exportWorking} onClick={() => void runExport(() => onExportSelected([...selectedEntries]))} className="min-h-11 rounded-full bg-[var(--ink)] px-4 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">Export selected{selectedEntries.size ? ` (${selectedEntries.size})` : ""}</button>}
               <button type="button" disabled={Boolean(exportBlockedReason) || exportWorking} onClick={() => void runExport(onExportAll)} className="min-h-11 rounded-full border border-[var(--ink)] px-4 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">Export all as text</button>
               {selectedEntries.size > 0 && <button type="button" onClick={() => setSelectedEntries(new Set())} className="min-h-11 rounded-full px-3 text-sm font-bold text-[var(--muted)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Clear selection</button>}
-            </div>
-            {exportBlockedReason && <p className="mt-2 text-xs font-semibold text-[var(--muted)]" role="status">{exportBlockedReason}</p>}
+            </div>}
+            {!cachedHistoryOnly && exportBlockedReason && <p className="mt-2 text-xs font-semibold text-[var(--muted)]" role="status">{exportBlockedReason}</p>}
             {historyError && <p className="mt-4 rounded-2xl border border-red-900/15 bg-red-50/60 p-4 text-sm text-red-900" role="alert">{historyError}</p>}
             {historyLoading && historyItems.length === 0 && <p className="mt-6 text-sm font-semibold text-[var(--muted)]" role="status">Searching your journal…</p>}
-            {!historyLoading && !historyError && historyItems.length === 0 && <div className="mt-6 rounded-2xl border border-dashed border-[var(--line)] p-7 text-center"><p className="font-serif text-2xl">No entries found.</p><p className="mt-2 text-sm text-[var(--muted)]">Try another phrase or clear the date filters.</p></div>}
+            {!historyLoading && !historyError && historyItems.length === 0 && <div className="mt-6 rounded-2xl border border-dashed border-[var(--line)] p-7 text-center"><p className="font-serif text-2xl">{cachedHistoryOnly ? "No cached entries on this device." : "No entries found."}</p><p className="mt-2 text-sm text-[var(--muted)]">{cachedHistoryOnly ? "Reconnect to load your journal history." : "Try another phrase or clear the date filters."}</p></div>}
 
             <div className="mt-5 space-y-3">
               {historyItems.map((entry, index) => {

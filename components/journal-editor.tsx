@@ -17,9 +17,16 @@ import { EntryPhoto } from "@/components/entry-photo";
 import { HabitDashboard } from "@/components/habit-dashboard";
 import { HabitOnboarding } from "@/components/habit-onboarding";
 import { LegalConsentPanel } from "@/components/legal-consent-panel";
+import { OfflineAccountPanel } from "@/components/offline-account-panel";
 import { ProductStoryPanel } from "@/components/product-story-panel";
 import { RichJournalEditor } from "@/components/rich-journal-editor";
 import { TimezonePanel } from "@/components/timezone-panel";
+import {
+  loadAccountBootstrapCache,
+  removeAccountBootstrapCache,
+  saveAccountBootstrapCache,
+  updateCachedProfile,
+} from "@/lib/account-cache";
 import {
   acceptCurrentLegalDocuments,
   clearPendingLegalConsent,
@@ -29,6 +36,7 @@ import {
 } from "@/lib/beta-operations";
 import {
   cacheFromCloudEntry,
+  listUserCloudCaches,
   loadCloudCache,
   removeUserCloudCaches,
   saveCloudCache,
@@ -63,7 +71,7 @@ import {
   saveRichEntry,
 } from "@/lib/entry-storage";
 import { getLocalDateString } from "@/lib/local-date";
-import { fetchEntryHistory } from "@/lib/history";
+import { fetchEntryHistory, historyPageFromCloudCaches } from "@/lib/history";
 import {
   fetchDailyPrompt,
   fetchHabitSummary,
@@ -95,6 +103,7 @@ import {
   type RichEntryDocument,
 } from "@/lib/rich-text";
 import type {
+  LegalAcceptanceStatus,
   WritingYearSummary,
 } from "@/types/beta";
 import type {
@@ -187,6 +196,7 @@ export function JournalEditor() {
   const [online, setOnline] = useState(true);
   const [legalAcceptanceRequired, setLegalAcceptanceRequired] = useState(false);
   const [legalAcceptanceError, setLegalAcceptanceError] = useState("");
+  const [offlineAccountRequired, setOfflineAccountRequired] = useState(false);
   const [cloudEntryId, setCloudEntryId] = useState<string | null>(null);
   const [entryMedia, setEntryMedia] = useState<EntryMedia | null>(null);
 
@@ -201,6 +211,9 @@ export function JournalEditor() {
   const sessionRef = useRef<Session | null>(null);
   const profileRef = useRef<Profile | null>(null);
   const cloudReadyRef = useRef(false);
+  const cloudVerifiedRef = useRef(false);
+  const offlineBootstrapRef = useRef(false);
+  const legalStatusRef = useRef<LegalAcceptanceStatus | null>(null);
   const conflictsRef = useRef<MigrationConflict[]>([]);
   const habitMonthRef = useRef("");
   const habitSummaryRef = useRef<HabitSummary | null>(null);
@@ -491,8 +504,11 @@ export function JournalEditor() {
     activeClient: Client,
     activeSession: Session,
     activeProfile: Profile,
+    resumeEntryDate: string | null = null,
   ) {
     cloudReadyRef.current = false;
+    cloudVerifiedRef.current = false;
+    offlineBootstrapRef.current = false;
     profileRef.current = activeProfile;
     setProfile(activeProfile);
     setTimezoneRequired(false);
@@ -516,21 +532,58 @@ export function JournalEditor() {
     setTodayDate(today);
     const currentMonth = monthStart(today);
     habitMonthRef.current = currentMonth;
-    localDateRef.current = today;
-    setLocalDate(today);
-    setDateLabel(formatDateInTimeZone(now, activeProfile.timezone));
+    const initialDate = resumeEntryDate
+      && resumeEntryDate <= today
+      && loadCloudCache(activeSession.user.id, resumeEntryDate)
+      ? resumeEntryDate
+      : today;
+    localDateRef.current = initialDate;
+    setLocalDate(initialDate);
+    setDateLabel(initialDate === today
+      ? formatDateInTimeZone(now, activeProfile.timezone)
+      : formatEntryDate(initialDate));
     await loadSignedInDate(
       activeClient,
       activeSession,
       activeProfile,
-      today,
+      initialDate,
       nextConflicts,
     );
     cloudReadyRef.current = true;
+    cloudVerifiedRef.current = true;
     void refreshHabitDashboard(currentMonth);
   }
 
+  async function bootstrapOffline(
+    activeClient: Client,
+    activeSession: Session,
+    activeProfile: Profile,
+  ) {
+    profileRef.current = activeProfile;
+    setProfile(activeProfile);
+    setTimezoneRequired(false);
+    setOfflineAccountRequired(false);
+    createSaveQueue(activeClient, activeSession.user.id);
+
+    const now = new Date();
+    const today = getDateInTimeZone(now, activeProfile.timezone);
+    todayDateRef.current = today;
+    setTodayDate(today);
+    habitMonthRef.current = monthStart(today);
+    setHabitSummary(null);
+    setWritingYearSummary(null);
+    setHabitLoading(false);
+    localDateRef.current = today;
+    setLocalDate(today);
+    setDateLabel(formatDateInTimeZone(now, activeProfile.timezone));
+    await loadSignedInDate(activeClient, activeSession, activeProfile, today);
+    cloudReadyRef.current = true;
+    cloudVerifiedRef.current = false;
+    offlineBootstrapRef.current = true;
+  }
+
   const bootstrapCloudFromEffect = useEffectEvent(bootstrapCloud);
+  const bootstrapOfflineFromEffect = useEffectEvent(bootstrapOffline);
   const loadSignedInDateFromEffect = useEffectEvent(loadSignedInDate);
   const refreshHabitFromEffect = useEffectEvent(refreshHabitDashboard);
 
@@ -649,6 +702,9 @@ export function JournalEditor() {
       queueRef.current = null;
       profileRef.current = null;
       cloudReadyRef.current = false;
+      cloudVerifiedRef.current = false;
+      offlineBootstrapRef.current = false;
+      legalStatusRef.current = null;
       queueMicrotask(() => {
         setProfile(null);
         setTimezoneRequired(false);
@@ -660,6 +716,7 @@ export function JournalEditor() {
         setConflictList([]);
         setLegalAcceptanceRequired(false);
         setLegalAcceptanceError("");
+        setOfflineAccountRequired(false);
         restoreAnonymousDate();
       });
       return;
@@ -667,26 +724,39 @@ export function JournalEditor() {
 
     let cancelled = false;
     void (async () => {
+      const cachedAccount = loadAccountBootstrapCache(session.user.id);
+      const resumeEntryDate = offlineBootstrapRef.current ? localDateRef.current : null;
+      let legalStatus: LegalAcceptanceStatus;
       try {
-        let legalStatus = await fetchLegalAcceptanceStatus(client);
+        legalStatus = await fetchLegalAcceptanceStatus(client);
         if (!legalStatus.accepted && hasPendingLegalConsent()) {
           legalStatus = await acceptCurrentLegalDocuments(client);
           if (legalStatus.accepted) clearPendingLegalConsent();
         }
         if (cancelled) return;
         if (!legalStatus.accepted) {
+          legalStatusRef.current = legalStatus;
+          setOfflineAccountRequired(false);
           setLegalAcceptanceRequired(true);
           setLegalAcceptanceError("");
           setSaveStatus("saved-local");
           return;
         }
+        legalStatusRef.current = legalStatus;
         setLegalAcceptanceRequired(false);
         setLegalAcceptanceError("");
+        setOfflineAccountRequired(false);
       } catch {
         if (cancelled) return;
-        setLegalAcceptanceRequired(true);
-        setLegalAcceptanceError("Acceptance could not be checked. Your draft remains on this device; please try again.");
-        setSaveStatus(navigator.onLine ? "error" : "offline");
+        setLegalAcceptanceRequired(false);
+        setLegalAcceptanceError("");
+        if (cachedAccount) {
+          legalStatusRef.current = cachedAccount.legalAcceptance;
+          await bootstrapOfflineFromEffect(client, session, cachedAccount.profile);
+        } else {
+          setOfflineAccountRequired(true);
+          setSaveStatus("offline");
+        }
         return;
       }
 
@@ -698,10 +768,16 @@ export function JournalEditor() {
           setSaveStatus("saved-local");
           return;
         }
-        await bootstrapCloudFromEffect(client, session, existingProfile);
+        saveAccountBootstrapCache(session.user.id, legalStatus, existingProfile);
+        await bootstrapCloudFromEffect(client, session, existingProfile, resumeEntryDate);
       } catch {
-        if (!cancelled) {
-          void recordOperationalEvent(client, "profile", "profile-load-failed");
+        if (cancelled) return;
+        void recordOperationalEvent(client, "profile", "profile-load-failed");
+        if (cachedAccount) {
+          saveAccountBootstrapCache(session.user.id, legalStatus, cachedAccount.profile);
+          await bootstrapOfflineFromEffect(client, session, cachedAccount.profile);
+        } else {
+          setOfflineAccountRequired(true);
           setSaveStatus(navigator.onLine ? "error" : "offline");
         }
       }
@@ -781,14 +857,19 @@ export function JournalEditor() {
     }
 
     function retryCloud() {
-      queueRef.current?.retryNow();
       const activeSession = sessionRef.current;
       const currentDate = localDateRef.current;
+      if (activeSession && navigator.onLine && !cloudVerifiedRef.current) {
+        setBootstrapRetry((value) => value + 1);
+        return;
+      }
+      queueRef.current?.retryNow();
       if (
         navigator.onLine &&
         activeSession &&
         currentDate &&
-        cloudReadyRef.current
+        cloudReadyRef.current &&
+        cloudVerifiedRef.current
       ) {
         const dirtyCache = loadCloudCache(activeSession.user.id, currentDate);
         if (dirtyCache?.dirty) {
@@ -801,7 +882,7 @@ export function JournalEditor() {
           });
         }
       }
-      if (sessionRef.current && !cloudReadyRef.current) {
+      if (sessionRef.current && navigator.onLine && !cloudReadyRef.current) {
         setBootstrapRetry((value) => value + 1);
       }
     }
@@ -920,6 +1001,10 @@ export function JournalEditor() {
       throw new Error("Authentication required");
     }
     const savedProfile = await saveProfileTimezone(client, timezone);
+    const legalStatus = legalStatusRef.current;
+    if (legalStatus?.accepted) {
+      saveAccountBootstrapCache(session.user.id, legalStatus, savedProfile);
+    }
     await bootstrapCloud(client, session, savedProfile);
   }
 
@@ -928,6 +1013,7 @@ export function JournalEditor() {
     try {
       const status = await acceptCurrentLegalDocuments(client);
       if (!status.accepted) throw new Error("Acceptance is incomplete");
+      legalStatusRef.current = status;
       clearPendingLegalConsent();
       setLegalAcceptanceError("");
       setLegalAcceptanceRequired(false);
@@ -960,11 +1046,14 @@ export function JournalEditor() {
   }
 
   async function checkEntryExists(entryDate: string): Promise<boolean> {
-    if (!client || !session || !navigator.onLine) {
+    if (!client || !session) {
       throw new Error("Cloud history is unavailable.");
     }
     const cached = loadCloudCache(session.user.id, entryDate);
     if (cached) return true;
+    if (!navigator.onLine) {
+      throw new Error("Cloud history is unavailable.");
+    }
     return Boolean(await fetchCloudEntry(client, entryDate));
   }
 
@@ -991,9 +1080,8 @@ export function JournalEditor() {
     filters: HistoryFilters,
     beforeDate: string | null = null,
   ): Promise<HistoryPage> {
-    if (!client || !session || !navigator.onLine) {
-      throw new Error("History requires a connection.");
-    }
+    if (!client || !session) throw new Error("Authentication required.");
+    if (!navigator.onLine) return historyPageFromCloudCaches(listUserCloudCaches(session.user.id));
     return fetchEntryHistory(client, filters, beforeDate);
   }
 
@@ -1127,6 +1215,7 @@ export function JournalEditor() {
     const savedProfile = mapProfileRow(row);
     profileRef.current = savedProfile;
     setProfile(savedProfile);
+    if (session) updateCachedProfile(session.user.id, savedProfile);
     if (savedProfile.dailyPromptsEnabled || dailyPrompt) {
       await loadPromptForDate(client, localDateRef.current);
     }
@@ -1158,6 +1247,7 @@ export function JournalEditor() {
     }
     persistCurrentImmediately();
     const savedProfile = await saveProfileTimezone(client, timezone);
+    updateCachedProfile(session.user.id, savedProfile);
     await bootstrapCloud(client, session, savedProfile);
   }
 
@@ -1175,6 +1265,7 @@ export function JournalEditor() {
     }
 
     removeUserCloudCaches(session.user.id);
+    removeAccountBootstrapCache(session.user.id);
     queueRef.current?.stop();
     intentionalSignOutRef.current = true;
     try {
@@ -1426,9 +1517,10 @@ export function JournalEditor() {
       <AuthPanel open={authOpen} onClose={() => setAuthOpen(false)} onAuthenticated={() => setAuthOpen(false)} />
       <ProductStoryPanel open={aboutOpen} onClose={() => setAboutOpen(false)} />
       {session && <LegalConsentPanel errorMessage={legalAcceptanceError} open={legalAcceptanceRequired} onAccept={completeLegalAcceptance} onSignOut={signOut} />}
+      {session && offlineAccountRequired && !legalAcceptanceRequired && <OfflineAccountPanel onSignOut={signOut} />}
       {timezoneRequired && session && !legalAcceptanceRequired && <TimezonePanel detectedTimezone={detectedTimezone} onSave={confirmTimezone} onSignOut={signOut} />}
       {profile && session && !profile.habitOnboardingCompleted && !timezoneRequired && !legalAcceptanceRequired && <HabitOnboarding onSave={updateHabitPreferences} />}
-      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} client={client} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onCheckEntryExists={checkEntryExists} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onRhythmViewed={() => void recordProductEvent(client, "writing_rhythm_viewed", todayDateRef.current)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
+      <HabitDashboard key={`${habitOpen}-${habitInitialView}`} cachedHistoryOnly={!online} client={client} exportBlockedReason={exportBlockedReason} initialView={habitInitialView} loading={habitLoading} onCheckEntryExists={checkEntryExists} onClose={closeHabitDashboard} onExportAll={() => exportEntries()} onExportSelected={exportEntries} onLoadHistory={loadHistory} onNextMonth={() => void changeHabitMonth(1)} onPreviousMonth={() => void changeHabitMonth(-1)} onRhythmViewed={() => void recordProductEvent(client, "writing_rhythm_viewed", todayDateRef.current)} onSelectDate={(date) => void selectEntryDate(date)} open={habitOpen} selectedDate={localDate} summary={habitSummary} writingYearSummary={writingYearSummary} />
       {profile && session && (
         <AccountPanel key={profile.userId} dataDownloadBlockedReason={exportBlockedReason} email={session.user.email ?? "Your account"} habitPreferences={habitPreferences!} open={accountOpen} timezone={profile.timezone} onClose={() => setAccountOpen(false)} onDelete={deleteAccount} onDownloadData={downloadPortableData} onSaveHabitPreferences={updateHabitPreferences} onSaveTimezone={updateTimezone} onSignOut={signOut} />
       )}

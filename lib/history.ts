@@ -7,6 +7,7 @@ import type {
   HistoryFilters,
   HistoryPage,
 } from "@/types/history";
+import type { CloudEntryCache } from "@/types/cloud";
 
 type Client = SupabaseClient<Database>;
 
@@ -80,4 +81,21 @@ export function mergeHistoryPages(
   const entries = new Map(current.map((entry) => [entry.entryDate, entry]));
   for (const entry of next) entries.set(entry.entryDate, entry);
   return [...entries.values()].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
+}
+
+export function historyPageFromCloudCaches(caches: CloudEntryCache[]): HistoryPage {
+  return {
+    hasMore: false,
+    items: caches
+      .map((cache): HistoryEntrySummary => ({
+        completed: cache.wordCount >= 100,
+        entryDate: cache.entryDate,
+        excerpt: cache.content.replace(/\s+/g, " ").trim().slice(0, 180),
+        updatedAt: cache.updatedAt,
+        wordCount: cache.wordCount,
+        media: null,
+      }))
+      .sort((left, right) => right.entryDate.localeCompare(left.entryDate)),
+    nextCursor: null,
+  };
 }
