@@ -4,6 +4,7 @@ import type { Database } from "@/lib/database.types";
 
 const MAX_BYTES = 1_000_000;
 const MAX_EDGE = 2_500;
+const MAX_SOURCE_BYTES = 10_000_000;
 
 async function renderWebp(bitmap: ImageBitmap, width: number, height: number, quality: number): Promise<Blob> {
   const canvas = document.createElement("canvas");
@@ -19,6 +20,7 @@ async function renderWebp(bitmap: ImageBitmap, width: number, height: number, qu
 
 export async function preparePublicationCover(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > MAX_SOURCE_BYTES) throw new Error("Choose an image up to 10 MB.");
   const bitmap = await createImageBitmap(file);
   try {
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
