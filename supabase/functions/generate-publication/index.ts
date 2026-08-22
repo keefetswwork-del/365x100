@@ -16,7 +16,7 @@ import {
 } from "./core.ts";
 
 const MODEL = "gpt-5.6-terra";
-const PROMPT_VERSION = "monthly-editor-v2";
+const PROMPT_VERSION = "monthly-editor-v3";
 const MONTHLY_SPEND_LIMIT_USD = 25;
 
 function isUuid(value: unknown): value is string {

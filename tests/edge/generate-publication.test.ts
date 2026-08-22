@@ -33,6 +33,7 @@ test("requests and validates a chapter-quality review for a source-rich month", 
 
   expect(prompt).toContain("500-700 word lead essay");
   expect(prompt).toContain("concrete detail from a dated source entry");
+  expect(prompt).toContain("empty arrays for themes, moments, and quotations");
   expect(prompt).toContain("em dashes or double hyphens");
   expect(validateEditorial(editorial, julySources)).toEqual(editorial);
   expect(validateEditorial({ ...editorial, review: Array.from({ length: 499 }, () => "short").join(" ") }, julySources)).toBeNull();

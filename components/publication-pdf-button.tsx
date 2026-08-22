@@ -12,6 +12,7 @@ export function PublicationPdfButton({ client, document, disabled, model }: {
   client: SupabaseClient<Database>;
   disabled: boolean;
   document: PublicationDocument;
+  label?: string;
   model: PublicationPageModel;
 }) {
   const [working, setWorking] = useState(false);
@@ -29,5 +30,5 @@ export function PublicationPdfButton({ client, document, disabled, model }: {
       setWorking(false);
     }
   }
-  return <div><button type="button" disabled={disabled || working} onClick={() => void download()} className="min-h-11 rounded-full bg-[var(--ink)] px-5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">{working ? "Preparing A5 PDF…" : "Download A5 PDF"}</button>{error && <p className="mt-2 text-sm text-red-900" role="alert">{error}</p>}</div>;
+  return <div><button type="button" disabled={disabled || working} onClick={() => void download()} className="min-h-11 rounded-full bg-[var(--ink)] px-5 text-sm font-bold text-white outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-40">{working ? "Preparing…" : "PDF"}</button>{error && <p className="mt-2 text-sm text-red-900" role="alert">{error}</p>}</div>;
 }

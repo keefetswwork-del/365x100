@@ -110,19 +110,13 @@ function Span({ span }: { span: PublicationSpan }) {
 function PublicationPdf({ images, model }: { images: Record<string, string>; model: PublicationPageModel }) {
   const cover = model.coverMediaId ? images[model.coverMediaId] : null;
   return <PdfDocument title={model.title} author="365x100" subject="Private monthly journal chapter">
-    <Page size="A5" style={styles.cover}>
-      {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image is not a DOM image. */}
-      {cover && <Image src={cover} style={styles.coverImage} />}
-      <View><Text style={styles.coverLabel}>365x100 monthly chapter</Text><Text style={styles.coverTitle}><Runs bold text={model.title} /></Text><Text style={styles.coverDate}>{displayPublicationDate(model.periodStart)} – {displayPublicationDate(model.periodEnd)}</Text></View>
-    </Page>
     <Page size="A5" style={styles.page} wrap>
-      {model.mode === "ai" && model.editorial && <View style={styles.section}>
-        <Text style={styles.kicker}>Chapter</Text>
-        {model.editorial.review.split(/\n\s*\n/).map((paragraph, index) => paragraph.trim() && <Text key={index} style={styles.editorialParagraph}><Runs text={paragraph.trim()} /></Text>)}
-        {model.editorial.themes.length > 0 && <View style={styles.themeRow}>{model.editorial.themes.map((theme) => <Text key={theme} style={styles.theme}><Runs text={theme} /></Text>)}</View>}
-        {model.editorial.moments.map((moment) => <View key={`${moment.sourceRef}-${moment.text}`} style={styles.section} wrap={false}><Text style={styles.kicker}>{displayPublicationDate(moment.date)}</Text><Text style={styles.paragraph}><Runs text={moment.text} /></Text></View>)}
-        {model.editorial.quotations.map((quote) => <Text key={`${quote.sourceRef}-${quote.quote}`} style={styles.quote}>“<Runs text={quote.quote} />”</Text>)}
-      </View>}
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image is not a DOM image. */}
+      {cover && <Image src={cover} style={styles.photo} />}
+      <View style={styles.section}>
+        <Text style={styles.heading}><Runs bold text={model.title} /></Text>
+        {model.mode === "ai" && model.editorial?.review && model.editorial.review.split(/\n\s*\n/).map((paragraph, index) => paragraph.trim() && <Text key={index} style={styles.editorialParagraph}><Runs text={paragraph.trim()} /></Text>)}
+      </View>
       {model.entries.map((entry) => <View key={entry.date} style={styles.section}>
         <View minPresenceAhead={80} wrap={false}>
           <Text style={styles.kicker}>{displayPublicationDate(entry.date)}</Text>
