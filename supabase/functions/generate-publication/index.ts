@@ -94,7 +94,7 @@ async function requestEditorial(
     outputTokens += generated.outputTokens;
   }
   const synthesized = await requestOnce(
-    buildEditorialSynthesisRequest(drafts, safetyId, section),
+    buildEditorialSynthesisRequest(drafts, sources, safetyId, section),
     (value) => validateSynthesis(value, sources, drafts),
   );
   return {

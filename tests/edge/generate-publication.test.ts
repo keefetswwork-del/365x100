@@ -24,20 +24,48 @@ test("builds a store-false request containing only allowed source fields", () =>
   expect(serialized).not.toContain("storagePath");
 });
 
-test("requests and validates a chapter-quality review for a source-rich month", () => {
-  const julySources = [{ content: Array.from({ length: 639 }, (_, index) => `word${index}`).join(" "), date: "2026-07-03", ref: "opaque-entry-ref", title: "July" }];
+test("keeps sparse entries short without padding them into an essay", () => {
+  const sparseSources = [{ content: "I got the email. It was good.", date: "2026-07-03", ref: "opaque-entry-ref", title: "Email" }];
+  const prompt = JSON.stringify(buildEditorialRequest(sparseSources, "hashed-safety-id", "full"));
+
+  expect(prompt).toContain("short, proportionate chapter");
+  expect(prompt).toContain("Do not pad sparse source material");
+  expect(prompt).toContain("Tell the story of what happened rather than summarising what happened");
+  expect(prompt).not.toContain("lead essay");
+  expect(prompt).not.toContain("closing insight");
+});
+
+test("uses a proportional, detail-preserving length for a source-rich month", () => {
+  const julySources = [{ content: Array.from({ length: 1_000 }, (_, index) => `word${index}`).join(" "), date: "2026-07-03", ref: "opaque-entry-ref", title: "July" }];
   const request = buildEditorialRequest(julySources, "hashed-safety-id", "full");
   const prompt = JSON.stringify(request);
-  const review = Array.from({ length: 500 }, () => "word").join(" ");
+  const review = Array.from({ length: 650 }, () => "word").join(" ");
   const editorial: EditorialDocument = { moments: [], quotations: [], review, themes: [], title: "July", version: 1 };
 
-  expect(prompt).toContain("500-700 word lead essay");
-  expect(prompt).toContain("concrete detail from a dated source entry");
+  expect(prompt).toContain("650-950 word chapter");
+  expect(prompt).toContain("specific scenes, conversations, places, decisions, frustrations, small wins, and observations");
+  expect(prompt).toContain("Preserve the writer's voice");
+  expect(prompt).toContain("Preserve emotional progression");
   expect(prompt).toContain("empty arrays for themes, moments, and quotations");
   expect(prompt).toContain("em dashes or double hyphens");
   expect(validateEditorial(editorial, julySources)).toEqual(editorial);
-  expect(validateEditorial({ ...editorial, review: Array.from({ length: 499 }, () => "short").join(" ") }, julySources)).toBeNull();
+  expect(validateEditorial({ ...editorial, review: Array.from({ length: 649 }, () => "short").join(" ") }, julySources)).toBeNull();
   expect(validateEditorial({ ...editorial, review: `${review}\u2014` }, julySources)).toBeNull();
+});
+
+test("directs entries from across the month into a continuous chronological chapter", () => {
+  const monthSources = [
+    { content: "My boss extended my probation. I was annoyed because I was still closing.", date: "2026-07-07", ref: "first", title: "Probation" },
+    { content: "I closed another client. It made me feel better about where I stood.", date: "2026-07-15", ref: "second", title: "Client" },
+    { content: "I went home for dinner again. I had been seeing more of my family this week.", date: "2026-07-28", ref: "third", title: "Dinner" },
+  ];
+  const prompt = JSON.stringify(buildEditorialRequest(monthSources, "hashed-safety-id", "full"));
+
+  expect(prompt).toContain("broadly in chronological order");
+  expect(prompt).toContain("natural transitions");
+  expect(prompt).toContain("recurring people, goals, problems, and situations carry forward");
+  expect(prompt).toContain("Do not write a recap, executive summary, thematic synthesis, or generic month overview");
+  expect(prompt).toContain("Never invent or embellish facts");
 });
 
 test("rejects invented moments and omits unsupported quotations", () => {
@@ -62,8 +90,10 @@ test("synthesizes large months without adding new sourced moments or uncontrolle
     title: "July",
     version: 1,
   };
-  const request = buildEditorialSynthesisRequest([draft], "hashed-safety-id", "full");
+  const request = buildEditorialSynthesisRequest([draft], sources, "hashed-safety-id", "full");
   expect(request).toMatchObject({ max_output_tokens: MAX_OUTPUT_TOKENS, store: false });
+  expect(JSON.stringify(request)).toContain("The drafts are ordered chronologically");
+  expect(JSON.stringify(request)).toContain("Tell the story of what happened rather than summarising what happened");
   expect(validateSynthesis(draft, sources, [draft])).toEqual(draft);
   expect(validateSynthesis({ ...draft, moments: [{ ...draft.moments[0], text: "A new claim." }] }, sources, [draft])).toBeNull();
   expect(estimateGenerationCostCeiling(sources)).toBeGreaterThan(0);
