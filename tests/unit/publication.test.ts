@@ -54,7 +54,7 @@ test("converts supported rich formatting into the shared preview and PDF model",
     editorial: null,
     entries: [{ content: "Bold and italic", entryDate: "2026-07-03", id: "entry", media: null, richContent: rich, title: "A title", version: 2, wordCount: 3 }],
     publication: {
-      approvedVersionId: null, coverMediaId: null, currentDraftVersionId: null, generationCount: 0,
+      approvedVersionId: null, coverMediaId: null, coverSource: "default", coverUploadPath: null, currentDraftVersionId: null, generationCount: 0,
       id: "publication", mode: "original", periodEnd: "2026-07-31", periodStart: "2026-07-01",
       scope: "monthly", sectionRegenerationCount: 0, staleReason: null, state: "ready", title: "July", updatedAt: "2026-08-01T00:00:00Z",
     },

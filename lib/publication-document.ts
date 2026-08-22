@@ -30,6 +30,8 @@ export interface PublicationPageEntry {
 
 export interface PublicationPageModel {
   coverMediaId: string | null;
+  coverSource: "default" | "entry" | "upload";
+  coverUploadPath: string | null;
   editorial: PublicationDocument["editorial"];
   entries: PublicationPageEntry[];
   mode: "ai" | "original";
@@ -123,6 +125,8 @@ export function buildPublicationPageModel(document: PublicationDocument): Public
   }));
   return {
     coverMediaId: document.publication.coverMediaId,
+    coverSource: document.publication.coverSource,
+    coverUploadPath: document.publication.coverUploadPath,
     editorial: document.editorial,
     entries,
     mode: document.publication.mode,

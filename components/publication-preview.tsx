@@ -1,9 +1,26 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
 
 import { PrivatePhoto } from "@/components/private-photo";
 import type { Database } from "@/lib/database.types";
 import { displayPublicationDate, type PublicationPageModel } from "@/lib/publication-document";
 import type { PublicationDocument } from "@/types/publication";
+
+function CoverImage({ client, path }: { client: SupabaseClient<Database>; path: string | null }) {
+  const [url, setUrl] = useState(path ? "" : "/chapter-cover-default.png");
+  useEffect(() => {
+    if (!path) {
+      setUrl("/chapter-cover-default.png");
+      return;
+    }
+    let active = true;
+    void client.storage.from("journal-media").createSignedUrl(path, 900).then(({ data }) => {
+      if (active) setUrl(data?.signedUrl ?? "");
+    });
+    return () => { active = false; };
+  }, [client, path]);
+  return url ? <img src={url} alt={path ? "Selected chapter cover" : "Default chapter cover"} className="block max-h-[32rem] w-full object-cover" /> : <div className="h-72 animate-pulse bg-[var(--paper)]" />;
+}
 
 export function PublicationPreview({ client, document, model }: {
   client: SupabaseClient<Database>;
@@ -11,9 +28,9 @@ export function PublicationPreview({ client, document, model }: {
   model: PublicationPageModel;
 }) {
   const media = new Map(document.entries.flatMap((entry) => entry.media ? [[entry.media.id, entry.media] as const] : []));
-  const cover = model.coverMediaId ? media.get(model.coverMediaId) : null;
+  const cover = model.coverSource === "entry" && model.coverMediaId ? media.get(model.coverMediaId) : null;
   return <article className="overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-white shadow-sm" aria-label="Chapter">
-    {cover && <div className="overflow-hidden border-b border-[var(--line)] bg-[var(--paper)]"><PrivatePhoto client={client} media={cover} alt="Selected chapter cover" className="block max-h-[32rem] w-full object-cover" /></div>}
+    <div className="overflow-hidden border-b border-[var(--line)] bg-[var(--paper)]">{cover ? <PrivatePhoto client={client} media={cover} alt="Selected chapter cover" className="block max-h-[32rem] w-full object-cover" /> : <CoverImage client={client} path={model.coverSource === "upload" ? model.coverUploadPath : null} />}</div>
     <div className="space-y-10 p-6 sm:p-10">
       <h3 className="max-w-3xl font-serif text-4xl leading-[0.98] tracking-[-0.05em] sm:text-6xl">{model.title}</h3>
       {model.mode === "ai" && model.editorial?.review && <section className="border-b border-[var(--line)] pb-12"><div className="space-y-5 font-serif text-2xl leading-relaxed">{model.editorial.review.split(/\n\s*\n/).map((paragraph, index) => paragraph.trim() && <p key={index}>{paragraph.trim()}</p>)}</div></section>}

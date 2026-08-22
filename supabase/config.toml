@@ -442,6 +442,12 @@ verify_jwt = true
 import_map = "./functions/journal-media/deno.json"
 entrypoint = "./functions/journal-media/index.ts"
 
+[functions.publication-cover-media]
+enabled = true
+verify_jwt = true
+import_map = "./functions/publication-cover-media/deno.json"
+entrypoint = "./functions/publication-cover-media/index.ts"
+
 [functions.cleanup-journal-media]
 enabled = true
 verify_jwt = false

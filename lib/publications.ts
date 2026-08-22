@@ -34,6 +34,8 @@ function publicationSummary(value: Json | undefined): PublicationSummary | null 
   if (!row || typeof row.id !== "string") return null;
   return {
     coverMediaId: typeof row.coverMediaId === "string" ? row.coverMediaId : null,
+    coverSource: row.coverSource === "upload" || row.coverSource === "entry" ? row.coverSource : typeof row.coverMediaId === "string" ? "entry" : "default",
+    coverUploadPath: typeof row.coverUploadPath === "string" ? row.coverUploadPath : null,
     generationCount: number(row.generationCount),
     id: row.id,
     mode: row.mode === "ai" ? "ai" : "original",
@@ -122,6 +124,8 @@ export function parsePublicationDocument(value: Json): PublicationDocument {
   }
   const base = publicationSummary({
     coverMediaId: rawPublication.cover_media_id,
+    coverSource: rawPublication.cover_source,
+    coverUploadPath: rawPublication.cover_upload_path,
     generationCount: rawPublication.generation_count,
     id: rawPublication.id,
     mode: rawPublication.mode,

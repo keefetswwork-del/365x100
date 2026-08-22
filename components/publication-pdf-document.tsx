@@ -57,11 +57,12 @@ function registerFonts() {
 
 const styles = StyleSheet.create({
   page: { backgroundColor: "#fffaf3", color: "#18332e", fontFamily: "Noto Sans", fontSize: 10.5, padding: 42 },
-  cover: { backgroundColor: "#18332e", color: "#ffffff", justifyContent: "flex-end", padding: 42 },
-  coverImage: { height: "100%", left: 0, objectFit: "cover", opacity: 0.48, position: "absolute", top: 0, width: "100%" },
-  coverLabel: { fontSize: 8, letterSpacing: 2, marginBottom: 12, textTransform: "uppercase" },
-  coverTitle: { fontFamily: "Noto Sans", fontSize: 34, fontWeight: 700, lineHeight: 1.05 },
-  coverDate: { fontSize: 9, marginTop: 16, opacity: 0.8 },
+  cover: { backgroundColor: "#e8e1d4", color: "#18332e", padding: 0 },
+  coverImage: { height: "100%", left: 0, objectFit: "cover", position: "absolute", top: 0, width: "100%" },
+  coverPanel: { backgroundColor: "rgba(255, 250, 243, 0.92)", margin: 32, marginTop: "auto", padding: 20 },
+  coverLabel: { fontSize: 8, letterSpacing: 2, marginBottom: 10, textTransform: "uppercase" },
+  coverTitle: { fontFamily: "Noto Sans", fontSize: 29, fontWeight: 700, lineHeight: 1.08 },
+  coverDate: { fontSize: 9, marginTop: 12 },
   section: { marginBottom: 22 },
   kicker: { color: "#b33f2e", fontSize: 7.5, letterSpacing: 1.5, marginBottom: 8, textTransform: "uppercase" },
   editorialParagraph: { fontSize: 16, lineHeight: 1.55, marginBottom: 12 },
@@ -69,7 +70,8 @@ const styles = StyleSheet.create({
   paragraph: { lineHeight: 1.65, marginBottom: 8 },
   quote: { borderLeftColor: "#91ad9e", borderLeftWidth: 2, fontSize: 13, lineHeight: 1.55, marginBottom: 10, paddingLeft: 10 },
   list: { lineHeight: 1.55, marginBottom: 5, paddingLeft: 12 },
-  photo: { marginBottom: 14, marginTop: 8, maxHeight: 360, objectFit: "contain", width: "100%" },
+  photo: { marginBottom: 14, marginTop: 8, maxHeight: 220, objectFit: "contain", width: "100%" },
+  openingPhoto: { height: 165, marginBottom: 12, marginTop: 8, objectFit: "contain", width: "100%" },
   footer: { bottom: 20, color: "#66736e", fontSize: 7, left: 42, position: "absolute", right: 42, textAlign: "center" },
   theme: { backgroundColor: "#dcebdc", borderRadius: 8, fontSize: 8, marginBottom: 5, marginRight: 5, paddingHorizontal: 8, paddingVertical: 5 },
   themeRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 14 },
@@ -108,24 +110,36 @@ function Span({ span }: { span: PublicationSpan }) {
 }
 
 function PublicationPdf({ images, model }: { images: Record<string, string>; model: PublicationPageModel }) {
-  const cover = model.coverMediaId ? images[model.coverMediaId] : null;
+  const defaultCover = typeof window === "undefined" ? "/chapter-cover-default.png" : `${window.location.origin}/chapter-cover-default.png`;
+  const cover = model.coverSource === "upload" && model.coverUploadPath ? images[model.coverUploadPath] : model.coverSource === "entry" && model.coverMediaId ? images[model.coverMediaId] : defaultCover;
   return <PdfDocument title={model.title} author="365x100" subject="Private monthly journal chapter">
-    <Page size="A5" style={styles.page} wrap>
+    <Page size="A5" style={styles.cover} wrap={false}>
       {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image is not a DOM image. */}
-      {cover && <Image src={cover} style={styles.photo} />}
+      <Image src={cover} style={styles.coverImage} />
+      <View style={styles.coverPanel}>
+        <Text style={styles.coverLabel}>365x100 monthly chapter</Text>
+        <Text style={styles.coverTitle}><Runs bold text={model.title} /></Text>
+        <Text style={styles.coverDate}>{displayPublicationDate(model.periodStart)} to {displayPublicationDate(model.periodEnd)}</Text>
+      </View>
+    </Page>
+    <Page size="A5" style={styles.page} wrap>
       <View style={styles.section}>
         <Text style={styles.heading}><Runs bold text={model.title} /></Text>
         {model.mode === "ai" && model.editorial?.review && model.editorial.review.split(/\n\s*\n/).map((paragraph, index) => paragraph.trim() && <Text key={index} style={styles.editorialParagraph}><Runs text={paragraph.trim()} /></Text>)}
       </View>
       {model.entries.map((entry) => <View key={entry.date} style={styles.section}>
-        <View minPresenceAhead={80} wrap={false}>
+        <View minPresenceAhead={220} wrap={false}>
           <Text style={styles.kicker}>{displayPublicationDate(entry.date)}</Text>
           {entry.title && <Text style={styles.heading}><Runs bold text={entry.title} /></Text>}
-        </View>
-        {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image is not a DOM image. */}
-        {entry.mediaId && images[entry.mediaId] && <Image src={images[entry.mediaId]} style={styles.photo} />}
-        <View>{entry.blocks.map((block, index) => <Text key={index} style={{ ...(block.kind === "heading" ? styles.heading : block.kind === "quote" ? styles.quote : block.kind === "list-item" ? styles.list : styles.paragraph), textAlign: block.align }}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- React PDF Image is not a DOM image. */}
+          {entry.mediaId && images[entry.mediaId] && <Image src={images[entry.mediaId]} style={styles.openingPhoto} />}
+          {entry.blocks.slice(0, 1).map((block, index) => <Text key={index} style={{ ...(block.kind === "heading" ? styles.heading : block.kind === "quote" ? styles.quote : block.kind === "list-item" ? styles.list : styles.paragraph), textAlign: block.align }}>
           {block.kind === "list-item" ? `${block.ordered ? `${index + 1}.` : "•"} ` : ""}
+          {block.spans.map((span, spanIndex) => <Span key={spanIndex} span={span} />)}
+          </Text>)}
+        </View>
+        <View>{entry.blocks.slice(1).map((block, index) => <Text key={index} style={{ ...(block.kind === "heading" ? styles.heading : block.kind === "quote" ? styles.quote : block.kind === "list-item" ? styles.list : styles.paragraph), textAlign: block.align }}>
+          {block.kind === "list-item" ? `${block.ordered ? `${index + 2}.` : "•"} ` : ""}
           {block.spans.map((span, spanIndex) => <Span key={spanIndex} span={span} />)}
         </Text>)}</View>
       </View>)}
@@ -156,6 +170,11 @@ export async function downloadPublicationPdf(
   for (const entry of document.entries) {
     if (!entry.media || images[entry.media.id]) continue;
     images[entry.media.id] = await webpToJpegDataUrl(await downloadMediaBlob(client, entry.media));
+  }
+  if (model.coverSource === "upload" && model.coverUploadPath) {
+    const { data, error } = await client.storage.from("journal-media").download(model.coverUploadPath);
+    if (error || !data) throw new Error("Cover photo could not be downloaded.");
+    images[model.coverUploadPath] = await webpToJpegDataUrl(data);
   }
   const blob = await pdf(<PublicationPdf images={images} model={model} />).toBlob();
   const link = globalThis.document.createElement("a");

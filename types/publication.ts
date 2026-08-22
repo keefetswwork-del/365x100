@@ -4,9 +4,12 @@ import type { EntryMedia } from "@/types/media";
 export type PublicationMode = "ai" | "original";
 export type PublicationState = "draft" | "eligible" | "failed" | "generating" | "ready" | "stale";
 export type EditorialSection = "moments" | "quotations" | "review" | "themes" | "title";
+export type PublicationCoverSource = "default" | "entry" | "upload";
 
 export interface PublicationSummary {
   coverMediaId: string | null;
+  coverSource: PublicationCoverSource;
+  coverUploadPath: string | null;
   generationCount: number;
   id: string;
   mode: PublicationMode;
