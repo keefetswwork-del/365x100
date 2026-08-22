@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   coverDate: { fontSize: 9, marginTop: 16, opacity: 0.8 },
   section: { marginBottom: 22 },
   kicker: { color: "#b33f2e", fontSize: 7.5, letterSpacing: 1.5, marginBottom: 8, textTransform: "uppercase" },
-  editorialReview: { fontSize: 16, lineHeight: 1.55 },
+  editorialParagraph: { fontSize: 16, lineHeight: 1.55, marginBottom: 12 },
   heading: { fontSize: 18, fontWeight: 700, lineHeight: 1.2, marginBottom: 8 },
   paragraph: { lineHeight: 1.65, marginBottom: 8 },
   quote: { borderLeftColor: "#91ad9e", borderLeftWidth: 2, fontSize: 13, lineHeight: 1.55, marginBottom: 10, paddingLeft: 10 },
@@ -117,8 +117,8 @@ function PublicationPdf({ images, model }: { images: Record<string, string>; mod
     </Page>
     <Page size="A5" style={styles.page} wrap>
       {model.mode === "ai" && model.editorial && <View style={styles.section}>
-        <Text style={styles.kicker}>The month in review</Text>
-        <Text style={styles.editorialReview}><Runs text={model.editorial.review} /></Text>
+        <Text style={styles.kicker}>Chapter</Text>
+        {model.editorial.review.split(/\n\s*\n/).map((paragraph, index) => paragraph.trim() && <Text key={index} style={styles.editorialParagraph}><Runs text={paragraph.trim()} /></Text>)}
         {model.editorial.themes.length > 0 && <View style={styles.themeRow}>{model.editorial.themes.map((theme) => <Text key={theme} style={styles.theme}><Runs text={theme} /></Text>)}</View>}
         {model.editorial.moments.map((moment) => <View key={`${moment.sourceRef}-${moment.text}`} style={styles.section} wrap={false}><Text style={styles.kicker}>{displayPublicationDate(moment.date)}</Text><Text style={styles.paragraph}><Runs text={moment.text} /></Text></View>)}
         {model.editorial.quotations.map((quote) => <Text key={`${quote.sourceRef}-${quote.quote}`} style={styles.quote}>“<Runs text={quote.quote} />”</Text>)}

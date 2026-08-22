@@ -24,6 +24,21 @@ test("builds a store-false request containing only allowed source fields", () =>
   expect(serialized).not.toContain("storagePath");
 });
 
+test("requests and validates a chapter-quality review for a source-rich month", () => {
+  const julySources = [{ content: Array.from({ length: 639 }, (_, index) => `word${index}`).join(" "), date: "2026-07-03", ref: "opaque-entry-ref", title: "July" }];
+  const request = buildEditorialRequest(julySources, "hashed-safety-id", "full");
+  const prompt = JSON.stringify(request);
+  const review = Array.from({ length: 500 }, () => "word").join(" ");
+  const editorial: EditorialDocument = { moments: [], quotations: [], review, themes: [], title: "July", version: 1 };
+
+  expect(prompt).toContain("500-700 word lead essay");
+  expect(prompt).toContain("concrete detail from a dated source entry");
+  expect(prompt).toContain("em dashes or double hyphens");
+  expect(validateEditorial(editorial, julySources)).toEqual(editorial);
+  expect(validateEditorial({ ...editorial, review: Array.from({ length: 499 }, () => "short").join(" ") }, julySources)).toBeNull();
+  expect(validateEditorial({ ...editorial, review: `${review}\u2014` }, julySources)).toBeNull();
+});
+
 test("rejects invented moments and omits unsupported quotations", () => {
   expect(validateEditorial({ moments: [{ date: "2026-07-03", sourceRef: "unknown", text: "Invented" }], quotations: [], review: "Review", themes: [], title: "July", version: 1 }, sources)).toBeNull();
   expect(validateEditorial({ moments: [{ date: "2026-07-04", sourceRef: "opaque-entry-ref", text: "Wrong date" }], quotations: [], review: "Review", themes: [], title: "July", version: 1 }, sources)).toBeNull();
