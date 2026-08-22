@@ -186,6 +186,16 @@ export function JournalEditor() {
   const [bootstrapRetry, setBootstrapRetry] = useState(0);
   const [habitOpen, setHabitOpen] = useState(false);
   const [habitInitialView, setHabitInitialView] = useState<JournalLibraryView>("calendar");
+  const [menuAnchor, setMenuAnchor] = useState<"desktop" | "mobile" | null>(null);
+  const menuDesktopRef = useRef<HTMLDivElement>(null);
+  const menuMobileRef = useRef<HTMLDivElement>(null);
+  const menuItems: Array<{ label: string; value: "account" | JournalLibraryView }> = [
+    { label: "Account", value: "account" },
+    { label: "Calendar", value: "calendar" },
+    { label: "History", value: "history" },
+    { label: "My book", value: "books" },
+    { label: "Progress", value: "progress" },
+  ];
   const [habitLoading, setHabitLoading] = useState(false);
   const [habitSummary, setHabitSummary] = useState<HabitSummary | null>(null);
   const [writingYearSummary, setWritingYearSummary] = useState<WritingYearSummary | null>(null);
@@ -1064,7 +1074,30 @@ export function JournalEditor() {
     setAuthOpen(true);
   }
 
+  useEffect(() => {
+    if (!menuAnchor) return;
+
+    function closeMenuOnOutsidePointer(event: PointerEvent) {
+      const target = event.target as Node;
+      if (!menuDesktopRef.current?.contains(target) && !menuMobileRef.current?.contains(target)) {
+        setMenuAnchor(null);
+      }
+    }
+
+    function closeMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuAnchor(null);
+    }
+
+    document.addEventListener("pointerdown", closeMenuOnOutsidePointer);
+    document.addEventListener("keydown", closeMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenuOnOutsidePointer);
+      document.removeEventListener("keydown", closeMenuOnEscape);
+    };
+  }, [menuAnchor]);
+
   function openHabitDashboard(view: JournalLibraryView = "calendar") {
+    setMenuAnchor(null);
     setHabitInitialView(view);
     const visibleDate = localDateRef.current || todayDateRef.current;
     if (visibleDate) {
@@ -1077,6 +1110,15 @@ export function JournalEditor() {
       void refreshHabitDashboard();
     }
     setHabitOpen(true);
+  }
+
+  function openMenuDestination(destination: "account" | JournalLibraryView) {
+    setMenuAnchor(null);
+    if (destination === "account") {
+      setAccountOpen(true);
+      return;
+    }
+    openHabitDashboard(destination);
   }
 
   async function checkEntryExists(entryDate: string): Promise<boolean> {
@@ -1423,14 +1465,31 @@ export function JournalEditor() {
                 <span className={`h-2 w-2 shrink-0 rounded-full ${saveStatus === "error" || saveStatus === "conflict" ? "bg-red-700" : saveStatus.startsWith("saving") || saveStatus === "retrying" ? "bg-[var(--accent)]" : "bg-[var(--sage)]"}`} aria-hidden="true" />
                 <span aria-live="polite">{statusLabel[saveStatus]}</span>
               </p>
-              <button
-                type="button"
-                disabled={!authResolved}
-                onClick={() => signedIn ? setAccountOpen(true) : openAuthPanel()}
-                className="rounded-full border border-[var(--line)] bg-white/40 px-3 py-2 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50 sm:px-4 sm:text-sm"
-              >
-                {signedIn ? "Account" : "Sign in"}
-              </button>
+              {signedIn ? (
+                <div ref={menuDesktopRef} className="relative">
+                  <button
+                    type="button"
+                    aria-controls="desktop-journal-menu"
+                    aria-expanded={menuAnchor === "desktop"}
+                    aria-haspopup="menu"
+                    onClick={() => setMenuAnchor((current) => current === "desktop" ? null : "desktop")}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white/40 px-3 py-2 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:px-4 sm:text-sm"
+                  >
+                    Menu <span aria-hidden="true" className={`text-base transition-transform ${menuAnchor === "desktop" ? "rotate-180" : ""}`}>▾</span>
+                  </button>
+                  {menuAnchor === "desktop" && (
+                    <div id="desktop-journal-menu" role="menu" aria-label="Journal menu" className="absolute right-0 top-full z-50 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-1.5 shadow-xl">
+                      {menuItems.map((item) => (
+                        <button key={item.value} type="button" role="menuitem" onClick={() => openMenuDestination(item.value)} className="flex min-h-10 w-full items-center rounded-xl px-3 text-left text-sm font-bold text-[var(--ink)] outline-none transition hover:bg-white/70 focus-visible:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button type="button" disabled={!authResolved} onClick={openAuthPanel} className="rounded-full border border-[var(--line)] bg-white/40 px-3 py-2 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50 sm:px-4 sm:text-sm">Sign in</button>
+              )}
             </div>
           </header>
 
@@ -1558,7 +1617,18 @@ export function JournalEditor() {
           <nav aria-label="Writing navigation" className="fixed inset-x-4 bottom-4 z-40 grid grid-cols-3 rounded-full border border-white/70 bg-[var(--paper)]/95 p-1.5 shadow-xl backdrop-blur sm:hidden">
             <button type="button" onClick={() => void returnToToday()} className={`rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${isToday ? "bg-[var(--ink)] text-white" : ""}`}>Today</button>
             <button type="button" onClick={() => openHabitDashboard("history")} className="rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Library</button>
-            <button type="button" onClick={() => setAccountOpen(true)} className="rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Account</button>
+            <div ref={menuMobileRef} className="relative">
+              <button type="button" aria-controls="mobile-journal-menu" aria-expanded={menuAnchor === "mobile"} aria-haspopup="menu" onClick={() => setMenuAnchor((current) => current === "mobile" ? null : "mobile")} className="w-full rounded-full px-3 py-2.5 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">Menu</button>
+              {menuAnchor === "mobile" && (
+                <div id="mobile-journal-menu" role="menu" aria-label="Journal menu" className="absolute bottom-full right-0 z-50 mb-3 w-44 rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-1.5 shadow-xl">
+                  {menuItems.map((item) => (
+                    <button key={item.value} type="button" role="menuitem" onClick={() => openMenuDestination(item.value)} className="flex min-h-10 w-full items-center rounded-xl px-3 text-left text-sm font-bold text-[var(--ink)] outline-none transition hover:bg-white/70 focus-visible:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
         )}
       </main>
